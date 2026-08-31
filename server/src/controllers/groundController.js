@@ -59,19 +59,20 @@ export const getGrounds=async(req,res)=>{
 export const getGroundById=async(req,res)=>{
     try {
         const {id}=req.params;
-        if(!id){
-            return res.status(404).json({
-                success:false,
-                message:"Ground not Found"
-            })
-
-        }
+       
         const result =await pool.query(
             `SELECT * FROM grounds WHERE id = $1`,[id]
         )
+        if(result.rows.length===0)
+        {
+            return res.status(404).json({
+        success: false,
+        message: "Ground not found",
+      });
+        }
         return res.status(200).json({
             success:true,
-            ground:result.rows
+            ground:result.rows[0]
         })
     } catch (error) {
          console.error("Get ground error:", error);
@@ -81,4 +82,67 @@ export const getGroundById=async(req,res)=>{
       message: "Internal server error",
     });
      }
+    }
+
+    export const updateGround=async(req,res)=>{
+        try {
+            const {id}=req.params
+        
+    const {
+        name,
+        description,
+        photos,
+        location,
+        city,
+        facilities,
+        status
+        } = req.body;
+   
+        const findground=await pool.query(
+            `SELECT * FROM grounds WHERE id=$1`,[id]
+        )
+        if(findground.rows.length===0)
+        {
+            return res.status(404).json({
+                success:false,
+                message:"Ground not found"
+            })
+        }
+        const ground=findground.rows[0]
+        if(ground.owner_id !== req.user.userId)
+        {
+             return res.status(403).json({
+    success: false,
+    message: "You are not authorized to update this ground",
+  });
+        }
+
+        const result=await pool.query(
+            `UPDATE grounds
+SET
+    name = COALESCE($1, name),
+    description = COALESCE($2, description),
+    photos = COALESCE($3, photos),
+    location = COALESCE($4, location),
+    city = COALESCE($5, city),
+    facilities = COALESCE($6, facilities),
+    status = COALESCE($7, status),
+    updated_at = CURRENT_TIMESTAMP
+WHERE id = $8
+RETURNING *`,[name,description,photos,location,city,facilities,status,id]
+        )
+
+        return res.status(200).json({
+            success:true,
+            ground:result.rows[0]
+        })
+        } catch (error) {
+             console.error("Update grounds error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+        }
+        
     }
