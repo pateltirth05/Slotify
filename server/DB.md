@@ -41,3 +41,19 @@ CREATE TABLE grounds (
 
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+
+USER
+ │
+ └── OWNER
+      │
+      └── GROUND
+           │
+           ├── RESOURCE
+           │    └── BOOKINGS
+           │
+           ├── RESOURCE
+           │    └── BOOKINGS
+           │
+           └── RESOURCE
+                └── BOOKINGS

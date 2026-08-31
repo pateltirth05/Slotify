@@ -146,3 +146,43 @@ RETURNING *`,[name,description,photos,location,city,facilities,status,id]
         }
         
     }
+
+export const deleteGround=async(req,res)=>{
+    try {
+        const {id}=req.params
+ const result=await pool.query(
+            `SELECT * FROM grounds WHERE id=$1`,[id]
+        )
+        if(result.rows.length===0)
+        {
+            return res.status(404).json({
+                success:false,
+                message:"Ground not found"
+            })
+        }
+        const ground=result.rows[0]
+        if(ground.owner_id !== req.user.userId)
+        {
+            return res.status(403).json({
+    success: false,
+    message: "You are not authorized to update this ground",
+  });
+        }
+
+        await pool.query(
+            `DELETE FROM grounds where id=$1`,[id]
+        )
+        return res.status(200).json({
+            success:true,
+            
+            message:"Ground Deleted Successfully"
+        })
+    } catch (error) {
+        console.error("Update grounds error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+        }
+    }
