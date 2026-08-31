@@ -1,4 +1,4 @@
-import pool from "../config/db";
+import pool from "../config/db.js";
 
 export const createGround=async(req,res)=>{
     try {
@@ -36,3 +36,49 @@ export const createGround=async(req,res)=>{
     });
     }
 }
+
+export const getGrounds=async(req,res)=>{
+     try {
+        const result=await pool.query(
+            "SELECT * FROM grounds WHERE status='ACTIVE'"
+        )
+        return res.status(200).json({
+    success: true,
+    grounds:result.rows
+});
+     } catch (error) {
+        console.error("Get grounds error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+     }
+}
+
+export const getGroundById=async(req,res)=>{
+    try {
+        const {id}=req.params;
+        if(!id){
+            return res.status(404).json({
+                success:false,
+                message:"Ground not Found"
+            })
+
+        }
+        const result =await pool.query(
+            `SELECT * FROM grounds WHERE id = $1`,[id]
+        )
+        return res.status(200).json({
+            success:true,
+            ground:result.rows
+        })
+    } catch (error) {
+         console.error("Get ground error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+     }
+    }
