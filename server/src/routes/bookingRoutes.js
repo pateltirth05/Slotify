@@ -1,7 +1,7 @@
 import express from "express";
 import { protect } from "../middleware/authMiddleware.js";
 import { requireRole } from "../middleware/roleMiddleware.js";
-import { createBooking, getMyBookings } from "../controllers/bookingController.js";
+import { cancelBooking, createBooking, getBookingById, getMyBookings } from "../controllers/bookingController.js";
 
 const router = express.Router();
 
@@ -18,5 +18,17 @@ router.post(
   createBooking
 );
 
+router.get(
+  "/:id",
+  protect,
+  requireRole("CUSTOMER"),
+  getBookingById
+);
 
+router.delete(
+  "/:id",
+  protect,
+  requireRole("CUSTOMER"),
+  cancelBooking
+);
 export default router;

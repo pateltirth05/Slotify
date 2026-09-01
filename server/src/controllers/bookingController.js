@@ -329,3 +329,118 @@ export const getMyBookings = async (req, res) => {
     });
   }
 };
+
+export const getBookingById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await pool.query(
+      `SELECT
+        b.id,
+        b.booking_date,
+        b.start_time,
+        b.end_time,
+        b.duration,
+        b.total_amount,
+        b.status,
+        b.created_at,
+        r.id AS resource_id,
+        r.name AS resource_name,
+        r.sport_type,
+        g.id AS ground_id,
+        g.name AS ground_name,
+        g.city,
+        g.location
+       FROM bookings b
+       JOIN resources r
+         ON b.resource_id = r.id
+       JOIN grounds g
+         ON r.ground_id = g.id
+       WHERE b.id = $1
+       AND b.customer_id = $2`,
+      [id, req.user.userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Booking not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      booking: result.rows[0],
+    });
+  } catch (error) {
+    console.error("Failed to get booking:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server error",
+    });
+  }
+};
+
+export const cancelBooking = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Find booking belonging to the logged-in customer
+    const bookingResult = await pool.query(
+      `SELECT *
+       FROM bookings
+       WHERE id = $1
+       AND customer_id = $2`,
+      [id, req.user.userId]
+    );
+
+    if (bookingResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Booking not found",
+      });
+    }
+
+    const booking = bookingResult.rows[0];
+
+    // Already cancelled
+    if (booking.status === "CANCELLED") {
+      return res.status(400).json({
+        success: false,
+        message: "Booking is already cancelled",
+      });
+    }
+
+    // Completed booking cannot be cancelled
+    if (booking.status === "COMPLETED") {
+      return res.status(400).json({
+        success: false,
+        message: "Completed booking cannot be cancelled",
+      });
+    }
+
+    // Cancel booking
+    const result = await pool.query(
+      `UPDATE bookings
+       SET status = 'CANCELLED',
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1
+       RETURNING *`,
+      [id]
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Booking cancelled successfully",
+      booking: result.rows[0],
+    });
+  } catch (error) {
+    console.error("Failed to cancel booking:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server error",
+    });
+  }
+};
