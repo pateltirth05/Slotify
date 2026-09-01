@@ -57,3 +57,27 @@ USER
            │
            └── RESOURCE
                 └── BOOKINGS
+
+CREATE TABLE resources (
+    id SERIAL PRIMARY KEY,
+
+    ground_id INTEGER NOT NULL
+        REFERENCES grounds(id)
+        ON DELETE CASCADE,
+
+    name VARCHAR(150) NOT NULL,
+
+    sport_type VARCHAR(50) NOT NULL,
+
+    price_per_hour NUMERIC(10, 2) NOT NULL,
+
+    opening_time TIME NOT NULL,
+
+    closing_time TIME NOT NULL,
+
+    status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
