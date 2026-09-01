@@ -269,8 +269,59 @@ export const createBooking = async (req, res) => {
       message: "Booking created successfully",
       booking: bookingResult.rows[0],
     });
+ } catch (error) {
+  console.error("Failed to create booking:", error);
+
+  if (error.code === "23P01") {
+    return res.status(409).json({
+      success: false,
+      message: "This time period is already booked",
+    });
+  }
+
+  return res.status(500).json({
+    success: false,
+    message: "Internal Server error",
+  });
+}
+};
+
+
+export const getMyBookings = async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT
+        b.id,
+        b.booking_date,
+        b.start_time,
+        b.end_time,
+        b.duration,
+        b.total_amount,
+        b.status,
+        b.created_at,
+        r.id AS resource_id,
+        r.name AS resource_name,
+        r.sport_type,
+        g.id AS ground_id,
+        g.name AS ground_name,
+        g.city,
+        g.location
+       FROM bookings b
+       JOIN resources r
+         ON b.resource_id = r.id
+       JOIN grounds g
+         ON r.ground_id = g.id
+       WHERE b.customer_id = $1
+       ORDER BY b.booking_date DESC, b.start_time DESC`,
+      [req.user.userId]
+    );
+
+    return res.status(200).json({
+      success: true,
+      bookings: result.rows,
+    });
   } catch (error) {
-    console.error("Failed to create booking:", error);
+    console.error("Failed to get customer bookings:", error);
 
     return res.status(500).json({
       success: false,
