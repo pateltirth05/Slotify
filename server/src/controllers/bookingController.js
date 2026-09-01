@@ -444,3 +444,60 @@ export const cancelBooking = async (req, res) => {
     });
   }
 };
+
+export const getOwnerBookings = async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT
+        b.id,
+        b.booking_date,
+        b.start_time,
+        b.end_time,
+        b.duration,
+        b.total_amount,
+        b.status,
+        b.created_at,
+
+        r.id AS resource_id,
+        r.name AS resource_name,
+        r.sport_type,
+
+        g.id AS ground_id,
+        g.name AS ground_name,
+        g.city,
+        g.location,
+
+        u.id AS customer_id,
+        u.name AS customer_name,
+        u.email AS customer_email
+
+       FROM bookings b
+
+       JOIN resources r
+         ON b.resource_id = r.id
+
+       JOIN grounds g
+         ON r.ground_id = g.id
+
+       JOIN users u
+         ON b.customer_id = u.id
+
+       WHERE g.owner_id = $1
+
+       ORDER BY b.booking_date ASC, b.start_time ASC`,
+      [req.user.userId]
+    );
+
+    return res.status(200).json({
+      success: true,
+      bookings: result.rows,
+    });
+  } catch (error) {
+    console.error("Failed to get owner bookings:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server error",
+    });
+  }
+};
