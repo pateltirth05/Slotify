@@ -77,3 +77,29 @@ export const getResourcesByGround=async(req,res)=>{
     }
 }
 
+export const getResourceById=async(req,res)=>{
+    try {
+        const {id}=req.params;
+
+        const result=await pool.query(
+            `SELECT * FROM resources WHERE id=$1`,[id]
+        )
+        if(result.rows.length===0)
+        {
+            return res.status(404).json({
+                success:false,
+                message:"Resource not found"
+            })
+        }
+        return res.status(200).json({
+            success:true,
+            resource:result.rows[0]
+        })
+    } catch (error) {
+         console.error("Failed to create new Resource",error)
+        return res.status(500).json({
+            success:false,
+            message:"Internal Server error"
+        })
+    }
+}
