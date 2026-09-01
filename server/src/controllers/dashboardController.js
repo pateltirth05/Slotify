@@ -1,3 +1,5 @@
+
+import pool from "../config/db.js";
 export const getOwnerDashboard = async (req, res) => {
   try {
     const ownerId = req.user.userId;
@@ -77,15 +79,15 @@ export const getOwnerDashboard = async (req, res) => {
     // 7. Booking status summary
     const statusResult = await pool.query(
       `SELECT
-         status,
-         COUNT(*) AS count
-       FROM bookings b
-       JOIN resources r
-         ON b.resource_id = r.id
-       JOIN grounds g
-         ON r.ground_id = g.id
-       WHERE g.owner_id = $1
-       GROUP BY status`,
+    b.status,
+    COUNT(*) AS count
+FROM bookings b
+JOIN resources r
+    ON b.resource_id = r.id
+JOIN grounds g
+    ON r.ground_id = g.id
+WHERE g.owner_id = $1
+GROUP BY b.status`,
       [ownerId]
     );
 
