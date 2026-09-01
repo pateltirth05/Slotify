@@ -501,3 +501,117 @@ export const getOwnerBookings = async (req, res) => {
     });
   }
 };
+
+export const updateBookingStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    // 1. Check status was provided
+    if (!status) {
+      return res.status(400).json({
+        success: false,
+        message: "Status is required",
+      });
+    }
+
+    // 2. Allowed statuses
+    const allowedStatuses = [
+      "CONFIRMED",
+      "CANCELLED",
+      "COMPLETED",
+    ];
+
+    if (!allowedStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid booking status",
+      });
+    }
+
+    // 3. Find booking through the owner's ground/resource
+    const bookingResult = await pool.query(
+      `SELECT
+        b.*,
+        r.ground_id,
+        g.owner_id
+       FROM bookings b
+       JOIN resources r
+         ON b.resource_id = r.id
+       JOIN grounds g
+         ON r.ground_id = g.id
+       WHERE b.id = $1
+       AND g.owner_id = $2`,
+      [id, req.user.userId]
+    );
+
+    // 4. Booking not found or not owned by this owner
+    if (bookingResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Booking not found",
+      });
+    }
+
+    const booking = bookingResult.rows[0];
+
+    // 5. Validate status transition
+
+    if (
+      booking.status === "PENDING" &&
+      !["CONFIRMED", "CANCELLED"].includes(status)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid status transition",
+      });
+    }
+
+    if (
+      booking.status === "CONFIRMED" &&
+      !["COMPLETED", "CANCELLED"].includes(status)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid status transition",
+      });
+    }
+
+    if (booking.status === "CANCELLED") {
+      return res.status(400).json({
+        success: false,
+        message: "Cancelled booking cannot be changed",
+      });
+    }
+
+    if (booking.status === "COMPLETED") {
+      return res.status(400).json({
+        success: false,
+        message: "Completed booking cannot be changed",
+      });
+    }
+
+    // 6. Update status
+    const result = await pool.query(
+      `UPDATE bookings
+       SET status = $1,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $2
+       RETURNING *`,
+      [status, id]
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Booking status updated successfully",
+      booking: result.rows[0],
+    });
+  } catch (error) {
+    console.error("Failed to update booking status:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server error",
+    });
+  }
+};

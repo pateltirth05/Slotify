@@ -1,7 +1,7 @@
 import express from "express";
 import { protect } from "../middleware/authMiddleware.js";
 import { requireRole } from "../middleware/roleMiddleware.js";
-import { cancelBooking, createBooking, getBookingById, getMyBookings, getOwnerBookings } from "../controllers/bookingController.js";
+import { cancelBooking, createBooking, getBookingById, getMyBookings, getOwnerBookings, updateBookingStatus } from "../controllers/bookingController.js";
 
 const router = express.Router();
 
@@ -23,7 +23,12 @@ router.post(
   requireRole("CUSTOMER"),
   createBooking
 );
-
+router.patch(
+  "/:id/status",
+  protect,
+  requireRole("OWNER"),
+  updateBookingStatus
+);
 router.get(
   "/:id",
   protect,
