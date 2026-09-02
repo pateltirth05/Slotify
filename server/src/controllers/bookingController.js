@@ -5,78 +5,127 @@ export const getAvailability = async (req, res) => {
     const { resourceId } = req.params;
     const { date } = req.query;
 
-    // 1. Check if date was provided
+    // ==========================================
+    // 1. Validate date
+    // ==========================================
+
     if (!date) {
       return res.status(400).json({
         success: false,
-        message: "Date is required",
+        message: "Date is required"
       });
     }
 
-    // 2. Validate date format
     const dateValue = new Date(`${date}T00:00:00`);
 
     if (Number.isNaN(dateValue.getTime())) {
       return res.status(400).json({
         success: false,
-        message: "Invalid date format. Use YYYY-MM-DD",
+        message: "Invalid date format. Use YYYY-MM-DD"
       });
     }
 
-    // 3. Check that the date is not in the past
+    // ==========================================
+    // 2. Don't allow past dates
+    // ==========================================
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     if (dateValue < today) {
       return res.status(400).json({
         success: false,
-        message: "You cannot check availability for a past date",
+        message: "You cannot check availability for a past date"
       });
     }
 
-    // 4. Find the resource
+    // ==========================================
+    // 3. Find resource
+    // ==========================================
+
     const resourceResult = await pool.query(
-      `SELECT id, ground_id, name, sport_type,
-              price_per_hour, opening_time, closing_time, status
-       FROM resources
-       WHERE id = $1`,
+      `
+      SELECT
+        id,
+        ground_id,
+        name,
+        sport_type,
+        price_per_hour,
+        opening_time,
+        closing_time,
+        status
+      FROM resources
+      WHERE id = $1
+      `,
       [resourceId]
     );
 
-    // 5. Resource doesn't exist
     if (resourceResult.rows.length === 0) {
       return res.status(404).json({
         success: false,
-        message: "Resource not found",
+        message: "Resource not found"
       });
     }
 
     const resource = resourceResult.rows[0];
 
-    // 6. Don't show availability for inactive resource
+    // ==========================================
+    // 4. Check resource status
+    // ==========================================
+
     if (resource.status !== "ACTIVE") {
       return res.status(400).json({
         success: false,
-        message: "This resource is currently inactive",
+        message: "This resource is currently inactive"
       });
     }
 
-    // 7. Get bookings for this resource and date
+    // ==========================================
+    // 5. Get bookings
+    // ==========================================
+
     const bookingResult = await pool.query(
-      `SELECT id, start_time, end_time
-       FROM bookings
-       WHERE resource_id = $1
-       AND booking_date = $2
-       AND status IN ('PENDING', 'CONFIRMED')
-       ORDER BY start_time`,
+      `
+      SELECT
+        id,
+        start_time,
+        end_time
+      FROM bookings
+      WHERE resource_id = $1
+        AND booking_date = $2
+        AND status IN ('PENDING', 'CONFIRMED')
+      ORDER BY start_time
+      `,
       [resourceId, date]
     );
 
-    // 8. Return availability information
+    // ==========================================
+    // 6. Get availability blocks
+    // ==========================================
+
+    const blockResult = await pool.query(
+      `
+      SELECT
+        id,
+        start_time,
+        end_time,
+        reason
+      FROM availability_blocks
+      WHERE resource_id = $1
+        AND block_date = $2
+      ORDER BY start_time
+      `,
+      [resourceId, date]
+    );
+
+    // ==========================================
+    // 7. Return availability information
+    // ==========================================
+
     return res.status(200).json({
       success: true,
 
-      date: date,
+      date,
 
       resource: {
         id: resource.id,
@@ -85,21 +134,29 @@ export const getAvailability = async (req, res) => {
         sport_type: resource.sport_type,
         price_per_hour: resource.price_per_hour,
         opening_time: resource.opening_time,
-        closing_time: resource.closing_time,
+        closing_time: resource.closing_time
       },
 
       booked_slots: bookingResult.rows.map((booking) => ({
         booking_id: booking.id,
         start_time: booking.start_time,
-        end_time: booking.end_time,
+        end_time: booking.end_time
       })),
+
+      blocked_slots: blockResult.rows.map((block) => ({
+        block_id: block.id,
+        start_time: block.start_time,
+        end_time: block.end_time,
+        reason: block.reason
+      }))
     });
+
   } catch (error) {
-    console.error("Failed to get availability:", error);
+    console.error("Get availability error:", error);
 
     return res.status(500).json({
       success: false,
-      message: "Internal Server error",
+      message: "Internal Server error"
     });
   }
 };
