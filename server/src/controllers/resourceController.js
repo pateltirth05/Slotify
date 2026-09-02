@@ -1,5 +1,5 @@
 import pool from "../config/db.js"
-
+import cloudinary from "../config/cloudinary.js";
 export const createResource=async(req,res)=>{
     try {
         const {name,sport_type,price_per_hour,opening_time,closing_time,status,ground_id}=req.body
@@ -274,6 +274,287 @@ export const deleteResource = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Internal Server error",
+    });
+  }
+};
+
+export const uploadResourcePhoto = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // ==========================================
+    // 1. Check image
+    // ==========================================
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "Please upload an image"
+      });
+    }
+
+    // ==========================================
+    // 2. Find resource + verify owner
+    // ==========================================
+
+    const resourceResult = await pool.query(
+      `
+      SELECT
+        r.id,
+        r.name,
+        r.photos,
+        g.owner_id
+      FROM resources r
+      JOIN grounds g
+        ON r.ground_id = g.id
+      WHERE r.id = $1
+      `,
+      [id]
+    );
+
+    if (resourceResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Resource not found"
+      });
+    }
+
+    const resource = resourceResult.rows[0];
+
+    // ==========================================
+    // 3. Ownership check
+    // ==========================================
+
+    if (resource.owner_id !== req.user.userId) {
+      return res.status(403).json({
+        success: false,
+        message: "You do not own this resource"
+      });
+    }
+
+    // ==========================================
+    // 4. Upload to Cloudinary
+    // ==========================================
+
+    const uploadResult = await new Promise((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder: `slotify/resources/${id}`
+        },
+        (error, result) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve(result);
+          }
+        }
+      );
+
+      uploadStream.end(req.file.buffer);
+    });
+
+    // ==========================================
+    // 5. Get existing photos
+    // ==========================================
+
+    const existingPhotos = resource.photos || [];
+
+    // ==========================================
+    // 6. Add new photo
+    // ==========================================
+
+    const updatedPhotos = [
+      ...existingPhotos,
+      uploadResult.secure_url
+    ];
+
+    // ==========================================
+    // 7. Save to database
+    // ==========================================
+
+    const result = await pool.query(
+      `
+      UPDATE resources
+      SET photos = $1
+      WHERE id = $2
+      RETURNING id, name, photos
+      `,
+      [updatedPhotos, id]
+    );
+
+    // ==========================================
+    // 8. Response
+    // ==========================================
+
+    return res.status(200).json({
+      success: true,
+      message: "Resource photo uploaded successfully",
+      resource: result.rows[0]
+    });
+
+  } catch (error) {
+    console.error("Upload resource photo error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to upload resource photo"
+    });
+  }
+};
+
+export const deleteResourcePhoto = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { photo_url } = req.body;
+
+    // ==========================================
+    // 1. Validate photo URL
+    // ==========================================
+
+    if (!photo_url) {
+      return res.status(400).json({
+        success: false,
+        message: "Photo URL is required"
+      });
+    }
+
+    // ==========================================
+    // 2. Find resource + verify ownership
+    // ==========================================
+
+    const resourceResult = await pool.query(
+      `
+      SELECT
+        r.id,
+        r.name,
+        r.photos,
+        g.owner_id
+      FROM resources r
+      JOIN grounds g
+        ON r.ground_id = g.id
+      WHERE r.id = $1
+      `,
+      [id]
+    );
+
+    if (resourceResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Resource not found"
+      });
+    }
+
+    const resource = resourceResult.rows[0];
+
+    // ==========================================
+    // 3. Ownership check
+    // ==========================================
+
+    if (resource.owner_id !== req.user.userId) {
+      return res.status(403).json({
+        success: false,
+        message: "You do not own this resource"
+      });
+    }
+
+    // ==========================================
+    // 4. Check whether photo belongs to resource
+    // ==========================================
+
+    const existingPhotos = resource.photos || [];
+
+    if (!existingPhotos.includes(photo_url)) {
+      return res.status(404).json({
+        success: false,
+        message: "Photo not found"
+      });
+    }
+
+    // ==========================================
+    // 5. Extract Cloudinary public ID
+    // ==========================================
+
+    const urlWithoutQuery = photo_url.split("?")[0];
+
+    const uploadIndex = urlWithoutQuery.indexOf("/upload/");
+
+    if (uploadIndex === -1) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid Cloudinary image URL"
+      });
+    }
+
+    let publicIdWithExtension = urlWithoutQuery
+      .substring(uploadIndex + 8)
+      .replace(/^v\d+\//, "");
+
+    const lastDotIndex = publicIdWithExtension.lastIndexOf(".");
+
+    if (lastDotIndex !== -1) {
+      publicIdWithExtension = publicIdWithExtension.substring(
+        0,
+        lastDotIndex
+      );
+    }
+
+    const publicId = publicIdWithExtension;
+
+    // ==========================================
+    // 6. Delete image from Cloudinary
+    // ==========================================
+
+    const cloudinaryResult = await cloudinary.uploader.destroy(
+      publicId,
+      {
+        resource_type: "image"
+      }
+    );
+
+    if (
+      cloudinaryResult.result !== "ok" &&
+      cloudinaryResult.result !== "not found"
+    ) {
+      return res.status(500).json({
+        success: false,
+        message: "Failed to delete image from Cloudinary"
+      });
+    }
+
+    // ==========================================
+    // 7. Remove URL from PostgreSQL
+    // ==========================================
+
+    const updatedPhotos = existingPhotos.filter(
+      (photo) => photo !== photo_url
+    );
+
+    const result = await pool.query(
+      `
+      UPDATE resources
+      SET photos = $1
+      WHERE id = $2
+      RETURNING id, name, photos
+      `,
+      [updatedPhotos, id]
+    );
+
+    // ==========================================
+    // 8. Response
+    // ==========================================
+
+    return res.status(200).json({
+      success: true,
+      message: "Resource photo deleted successfully",
+      resource: result.rows[0]
+    });
+
+  } catch (error) {
+    console.error("Delete resource photo error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to delete resource photo"
     });
   }
 };
