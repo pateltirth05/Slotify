@@ -1,22 +1,34 @@
-import { useEffect, useState } from 'react'
-import AppRoutes from './routes/AppRoutes'
-import api from './services/api'
-
+import { useAuth } from "./context/AuthContext.jsx";
 
 function App() {
-useEffect(()=>{
-  api.get("/../health").then((response)=>{
-    console.log("Backend response",response.data)
-  }).catch((error)=>{
-    console.error("Backend connection failed",error)
-  })
-},[])
+  const { user, login, logout } = useAuth();
+
   return (
-    <>
-    <h1>Slotify</h1>
-    <AppRoutes/>
-    </>
-  )
+    <div>
+      <h1>Slotify Authentication Test</h1>
+
+      <p>
+        User: {user ? user.name : "Not logged in"}
+      </p>
+
+      <button
+        onClick={() =>
+          login({
+            id: 1,
+            name: "GOD",
+            email: "test@example.com",
+            role: "CUSTOMER"
+          })
+        }
+      >
+        Test Login
+      </button>
+
+      <button onClick={logout}>
+        Test Logout
+      </button>
+    </div>
+  );
 }
 
-export default App
+export default App;
