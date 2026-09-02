@@ -4,6 +4,7 @@ import { protect } from "../middleware/authMiddleware.js";
 import { requireRole } from "../middleware/roleMiddleware.js";
 
 import {
+    getCustomerDashboard,
   getOwnerDashboard,
 } from "../controllers/dashboardController.js";
 
@@ -15,5 +16,10 @@ router.get(
   requireRole("OWNER"),
   getOwnerDashboard
 );
-
+router.get(
+  "/customer",
+  protect,
+  requireRole("CUSTOMER"),
+  getCustomerDashboard
+);
 export default router;

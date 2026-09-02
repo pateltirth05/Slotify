@@ -37,24 +37,91 @@ export const createGround=async(req,res)=>{
     }
 }
 
-export const getGrounds=async(req,res)=>{
-     try {
-        const result=await pool.query(
-            "SELECT * FROM grounds WHERE status='ACTIVE'"
-        )
-        return res.status(200).json({
-    success: true,
-    grounds:result.rows
-});
-     } catch (error) {
-        console.error("Get grounds error:", error);
+// export const getGrounds=async(req,res)=>{
+//      try {
+//         const result=await pool.query(
+//             "SELECT * FROM grounds WHERE status='ACTIVE'"
+//         )
+//         return res.status(200).json({
+//     success: true,
+//     grounds:result.rows
+// });
+//      } catch (error) {
+//         console.error("Get grounds error:", error);
+
+//     return res.status(500).json({
+//       success: false,
+//       message: "Internal server error",
+//     });
+//      }
+// }
+
+export const getGrounds = async (req, res) => {
+  try {
+    const {
+      city,
+      sport,
+      min_price,
+      max_price,
+    } = req.query;
+
+    let query = `
+      SELECT DISTINCT
+        g.*
+      FROM grounds g
+      LEFT JOIN resources r
+        ON r.ground_id = g.id
+      WHERE g.status = 'ACTIVE'
+    `;
+
+    const values = [];
+    let paramIndex = 1;
+
+    // City filter
+    if (city) {
+      query += ` AND LOWER(g.city) = LOWER($${paramIndex})`;
+      values.push(city);
+      paramIndex++;
+    }
+
+    // Sport filter
+    if (sport) {
+      query += ` AND LOWER(r.sport_type) = LOWER($${paramIndex})`;
+      values.push(sport);
+      paramIndex++;
+    }
+
+    // Minimum price filter
+    if (min_price) {
+      query += ` AND r.price_per_hour >= $${paramIndex}`;
+      values.push(min_price);
+      paramIndex++;
+    }
+
+    // Maximum price filter
+    if (max_price) {
+      query += ` AND r.price_per_hour <= $${paramIndex}`;
+      values.push(max_price);
+      paramIndex++;
+    }
+
+    query += ` ORDER BY g.created_at DESC`;
+
+    const result = await pool.query(query, values);
+
+    return res.status(200).json({
+      success: true,
+      grounds: result.rows,
+    });
+  } catch (error) {
+    console.error("Failed to get grounds:", error);
 
     return res.status(500).json({
       success: false,
-      message: "Internal server error",
+      message: "Internal Server error",
     });
-     }
-}
+  }
+};
 
 export const getGroundById=async(req,res)=>{
     try {

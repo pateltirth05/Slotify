@@ -166,3 +166,119 @@ GROUP BY b.status`,
     });
   }
 };
+
+
+export const getCustomerDashboard = async (req, res) => {
+  try {
+    const customerId = req.user.userId;
+
+    // 1. Total bookings
+    const totalBookingsResult = await pool.query(
+      `SELECT COUNT(*) AS total_bookings
+       FROM bookings
+       WHERE customer_id = $1`,
+      [customerId]
+    );
+
+    // 2. Upcoming bookings
+    const upcomingBookingsResult = await pool.query(
+      `SELECT COUNT(*) AS upcoming_bookings
+       FROM bookings
+       WHERE customer_id = $1
+       AND status IN ('PENDING', 'CONFIRMED')
+       AND (
+         booking_date > CURRENT_DATE
+         OR (
+           booking_date = CURRENT_DATE
+           AND end_time > CURRENT_TIME
+         )
+       )`,
+      [customerId]
+    );
+
+    // 3. Completed bookings
+    const completedBookingsResult = await pool.query(
+      `SELECT COUNT(*) AS completed_bookings
+       FROM bookings
+       WHERE customer_id = $1
+       AND status = 'COMPLETED'`,
+      [customerId]
+    );
+
+    // 4. Cancelled bookings
+    const cancelledBookingsResult = await pool.query(
+      `SELECT COUNT(*) AS cancelled_bookings
+       FROM bookings
+       WHERE customer_id = $1
+       AND status = 'CANCELLED'`,
+      [customerId]
+    );
+
+    // 5. Total spent
+    const totalSpentResult = await pool.query(
+      `SELECT COALESCE(SUM(total_amount), 0) AS total_spent
+       FROM bookings
+       WHERE customer_id = $1
+       AND status IN ('CONFIRMED', 'COMPLETED')`,
+      [customerId]
+    );
+
+    // 6. Recent / upcoming bookings
+    const recentBookingsResult = await pool.query(
+      `SELECT
+         b.id,
+         b.booking_date,
+         b.start_time,
+         b.end_time,
+         b.duration,
+         b.total_amount,
+         b.status,
+         r.name AS resource_name,
+         r.sport_type,
+         g.name AS ground_name,
+         g.city
+       FROM bookings b
+       JOIN resources r
+         ON b.resource_id = r.id
+       JOIN grounds g
+         ON r.ground_id = g.id
+       WHERE b.customer_id = $1
+       ORDER BY b.booking_date DESC, b.start_time DESC
+       LIMIT 5`,
+      [customerId]
+    );
+
+    return res.status(200).json({
+      success: true,
+
+      dashboard: {
+        total_bookings: Number(
+          totalBookingsResult.rows[0].total_bookings
+        ),
+
+        upcoming_bookings: Number(
+          upcomingBookingsResult.rows[0].upcoming_bookings
+        ),
+
+        completed_bookings: Number(
+          completedBookingsResult.rows[0].completed_bookings
+        ),
+
+        cancelled_bookings: Number(
+          cancelledBookingsResult.rows[0].cancelled_bookings
+        ),
+
+        total_spent: totalSpentResult.rows[0].total_spent,
+
+        recent_bookings: recentBookingsResult.rows,
+      },
+    });
+  } catch (error) {
+    console.error("Failed to get customer dashboard:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server error",
+    });
+  }
+};
