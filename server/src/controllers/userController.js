@@ -11,6 +11,7 @@ export const getMyProfile = async (req, res) => {
         u.name,
         u.email,
         u.role,
+        u.status,
         u.created_at,
         COUNT(b.id) AS total_bookings
       FROM users u
@@ -22,6 +23,7 @@ export const getMyProfile = async (req, res) => {
         u.name,
         u.email,
         u.role,
+        u.status,
         u.created_at
       `,
       [userId]
@@ -45,7 +47,7 @@ export const getMyProfile = async (req, res) => {
         role: user.role,
         member_since: user.created_at,
         total_bookings: Number(user.total_bookings),
-        account_status: "Active"
+        account_status: user.status
       }
     });
   } catch (error) {
