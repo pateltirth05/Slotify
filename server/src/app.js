@@ -10,6 +10,7 @@ import ownerPaymentRoutes from "./routes/ownerPaymentRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
+import ownerEarningsRoutes from "./routes/ownerEarningsRoutes.js";
 const app=express()
 
 app.use(express.json())
@@ -30,4 +31,5 @@ app.use("/api/owner-payment", ownerPaymentRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/owner", ownerEarningsRoutes);
 export default app;

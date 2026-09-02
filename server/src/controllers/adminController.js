@@ -242,3 +242,513 @@ export const updateUserStatus = async (req, res) => {
     });
   }
 };
+export const getAdminGrounds = async (req, res) => {
+  try {
+    const result = await pool.query(
+      `
+      SELECT
+        g.id,
+        g.name,
+        g.description,
+        g.location,
+        g.city,
+        g.photos,
+        g.facilities,
+        g.status,
+        g.created_at,
+        g.updated_at,
+
+        u.id AS owner_id,
+        u.name AS owner_name,
+        u.email AS owner_email
+
+      FROM grounds g
+
+      JOIN users u
+        ON u.id = g.owner_id
+
+      ORDER BY g.created_at DESC
+      `
+    );
+
+    res.status(200).json({
+      success: true,
+      grounds: result.rows
+    });
+
+  } catch (error) {
+    console.error("Admin get grounds error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to get grounds"
+    });
+  }
+};
+export const updateGroundStatus = async (req, res) => {
+  try {
+    const groundId = req.params.id;
+    const { status } = req.body;
+
+    if (!status || !["ACTIVE", "INACTIVE"].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Status must be ACTIVE or INACTIVE"
+      });
+    }
+
+    const result = await pool.query(
+      `
+      UPDATE grounds
+      SET
+        status = $1,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $2
+      RETURNING
+        id,
+        name,
+        owner_id,
+        status,
+        updated_at
+      `,
+      [status, groundId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Ground not found"
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Ground status changed to ${status}`,
+      ground: result.rows[0]
+    });
+
+  } catch (error) {
+    console.error("Admin update ground status error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to update ground status"
+    });
+  }
+};
+export const getAdminResources = async (req, res) => {
+  try {
+    const result = await pool.query(
+      `
+      SELECT
+        r.id,
+        r.name,
+        r.sport_type,
+        r.price_per_hour,
+        r.opening_time,
+        r.closing_time,
+        r.status,
+        r.photos,
+        r.created_at,
+        r.updated_at,
+
+        g.id AS ground_id,
+        g.name AS ground_name,
+        g.owner_id,
+
+        u.name AS owner_name,
+        u.email AS owner_email
+
+      FROM resources r
+
+      JOIN grounds g
+        ON g.id = r.ground_id
+
+      JOIN users u
+        ON u.id = g.owner_id
+
+      ORDER BY r.created_at DESC
+      `
+    );
+
+    res.status(200).json({
+      success: true,
+      resources: result.rows
+    });
+
+  } catch (error) {
+    console.error("Admin get resources error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to get resources"
+    });
+  }
+};
+export const updateResourceStatus = async (req, res) => {
+  try {
+    const resourceId = req.params.id;
+    const { status } = req.body;
+
+    if (!status || !["ACTIVE", "INACTIVE"].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Status must be ACTIVE or INACTIVE"
+      });
+    }
+
+    const result = await pool.query(
+      `
+      UPDATE resources
+      SET
+        status = $1,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $2
+      RETURNING
+        id,
+        ground_id,
+        name,
+        sport_type,
+        status,
+        updated_at
+      `,
+      [status, resourceId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Resource not found"
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Resource status changed to ${status}`,
+      resource: result.rows[0]
+    });
+
+  } catch (error) {
+    console.error("Admin update resource status error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to update resource status"
+    });
+  }
+};
+export const getAdminBookings = async (req, res) => {
+  try {
+    const result = await pool.query(
+      `
+      SELECT
+        b.id,
+        b.booking_date,
+        b.start_time,
+        b.end_time,
+        b.duration,
+        b.total_amount,
+        b.status,
+        b.payment_method,
+        b.payment_status,
+        b.paid_at,
+        b.created_at,
+        b.updated_at,
+
+        u.id AS customer_id,
+        u.name AS customer_name,
+        u.email AS customer_email,
+
+        g.id AS ground_id,
+        g.name AS ground_name,
+
+        r.id AS resource_id,
+        r.name AS resource_name,
+        r.sport_type
+
+      FROM bookings b
+
+      JOIN users u
+        ON u.id = b.customer_id
+
+      JOIN resources r
+        ON r.id = b.resource_id
+
+      JOIN grounds g
+        ON g.id = r.ground_id
+
+      ORDER BY
+        b.booking_date DESC,
+        b.start_time DESC,
+        b.created_at DESC
+      `
+    );
+
+    res.json({
+      success: true,
+      bookings: result.rows
+    });
+
+  } catch (error) {
+    console.error("Get admin bookings error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Server error"
+    });
+  }
+};
+
+
+export const updateAdminBookingStatus = async (req, res) => {
+  try {
+    const bookingId = req.params.id;
+    const { status } = req.body;
+
+    const allowedStatuses = [
+      "PENDING",
+      "CONFIRMED",
+      "CANCELLED",
+      "COMPLETED"
+    ];
+
+    if (!status || !allowedStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid booking status"
+      });
+    }
+
+    const bookingResult = await pool.query(
+      `
+      SELECT
+        b.id,
+        b.status,
+        b.payment_status,
+        b.customer_id,
+        r.name AS resource_name
+      FROM bookings b
+      JOIN resources r
+        ON r.id = b.resource_id
+      WHERE b.id = $1
+      `,
+      [bookingId]
+    );
+
+    if (bookingResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Booking not found"
+      });
+    }
+
+    const booking = bookingResult.rows[0];
+
+    const allowedTransitions = {
+      PENDING: ["CONFIRMED", "CANCELLED"],
+      CONFIRMED: ["COMPLETED", "CANCELLED"],
+      CANCELLED: [],
+      COMPLETED: []
+    };
+
+    if (
+      booking.status !== status &&
+      !allowedTransitions[booking.status].includes(status)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot change booking status from ${booking.status} to ${status}`
+      });
+    }
+
+    const updatedBooking = await pool.query(
+      `
+      UPDATE bookings
+      SET
+        status = $1,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $2
+      RETURNING *
+      `,
+      [status, bookingId]
+    );
+
+    res.json({
+      success: true,
+      message: "Booking status updated successfully",
+      booking: updatedBooking.rows[0]
+    });
+
+  } catch (error) {
+    console.error("Update admin booking status error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Server error"
+    });
+  }
+};
+
+export const getAdminPayments = async (req, res) => {
+  try {
+    const result = await pool.query(
+      `
+      SELECT
+        p.id,
+        p.booking_id,
+        p.amount,
+        p.currency,
+        p.payment_method,
+        p.status AS payment_status,
+        p.settlement_status,
+        p.razorpay_order_id,
+        p.razorpay_payment_id,
+        p.paid_at,
+        p.created_at,
+        p.updated_at,
+
+        customer.id AS customer_id,
+        customer.name AS customer_name,
+        customer.email AS customer_email,
+
+        owner.id AS owner_id,
+        owner.name AS owner_name,
+        owner.email AS owner_email,
+
+        g.id AS ground_id,
+        g.name AS ground_name,
+
+        r.id AS resource_id,
+        r.name AS resource_name,
+        r.sport_type,
+
+        b.booking_date,
+        b.start_time,
+        b.end_time,
+        b.status AS booking_status
+
+      FROM payments p
+
+      JOIN bookings b
+        ON b.id = p.booking_id
+
+      JOIN users customer
+        ON customer.id = p.customer_id
+
+      JOIN users owner
+        ON owner.id = p.owner_id
+
+      JOIN resources r
+        ON r.id = b.resource_id
+
+      JOIN grounds g
+        ON g.id = r.ground_id
+
+      ORDER BY p.created_at DESC
+      `
+    );
+
+    res.json({
+      success: true,
+      payments: result.rows
+    });
+
+  } catch (error) {
+    console.error("Get admin payments error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Server error"
+    });
+  }
+};
+export const settleAdminPayment = async (req, res) => {
+  try {
+    const paymentId = req.params.id;
+
+    const paymentResult = await pool.query(
+      `
+      SELECT
+        p.id,
+        p.booking_id,
+        p.owner_id,
+        p.amount,
+        p.payment_method,
+        p.status,
+        p.settlement_status
+      FROM payments p
+      WHERE p.id = $1
+      `,
+      [paymentId]
+    );
+
+    if (paymentResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Payment not found"
+      });
+    }
+
+    const payment = paymentResult.rows[0];
+
+    // Settlement is only for online payments
+    if (payment.payment_method !== "ONLINE") {
+      return res.status(400).json({
+        success: false,
+        message: "Only online payments can be settled"
+      });
+    }
+
+    // Customer payment must already be completed
+    if (payment.status !== "PAID") {
+      return res.status(400).json({
+        success: false,
+        message: "Payment must be PAID before settlement"
+      });
+    }
+
+    // Prevent duplicate settlement
+    if (payment.settlement_status === "SETTLED") {
+      return res.status(400).json({
+        success: false,
+        message: "Payment has already been settled"
+      });
+    }
+
+    const updatedPayment = await pool.query(
+      `
+      UPDATE payments
+      SET
+        settlement_status = 'SETTLED',
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1
+      RETURNING
+        id,
+        booking_id,
+        owner_id,
+        amount,
+        currency,
+        payment_method,
+        status,
+        settlement_status,
+        paid_at,
+        updated_at
+      `,
+      [paymentId]
+    );
+
+    res.json({
+      success: true,
+      message: "Payment settled successfully",
+      payment: updatedPayment.rows[0]
+    });
+
+  } catch (error) {
+    console.error("Settle admin payment error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Server error"
+    });
+  }
+};
