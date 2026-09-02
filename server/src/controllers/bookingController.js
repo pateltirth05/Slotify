@@ -165,12 +165,14 @@ export const getAvailability = async (req, res) => {
 
 export const createBooking = async (req, res) => {
   try {
+    const customerId = req.user.userId;
     const {
-      resource_id,
-      booking_date,
-      start_time,
-      end_time,
-    } = req.body;
+  resource_id,
+  booking_date,
+  start_time,
+  end_time,
+  payment_method
+} = req.body;
 
     // 1. Validate required fields
     if (!resource_id || !booking_date || !start_time || !end_time) {
@@ -208,7 +210,19 @@ export const createBooking = async (req, res) => {
         message: "Start time must be before end time",
       });
     }
+if (!payment_method) {
+  return res.status(400).json({
+    success: false,
+    message: "Payment method is required"
+  });
+}
 
+if (!["ONLINE", "CASH"].includes(payment_method)) {
+  return res.status(400).json({
+    success: false,
+    message: "Invalid payment method"
+  });
+}
     // 5. Find the resource
     const resourceResult = await pool.query(
       `SELECT
@@ -296,28 +310,31 @@ export const createBooking = async (req, res) => {
 
     // 11. Create booking
     const bookingResult = await pool.query(
-      `INSERT INTO bookings
-       (
-         resource_id,
-         customer_id,
-         booking_date,
-         start_time,
-         end_time,
-         duration,
-         total_amount,
-         status
-       )
-       VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING')
-       RETURNING *`,
-      [
-        resource_id,
-        req.user.userId,
-        booking_date,
-        start_time,
-        end_time,
-        durationInHours,
-        totalAmount,
-      ]
+       `
+  INSERT INTO bookings (
+    resource_id,
+    customer_id,
+    booking_date,
+    start_time,
+    end_time,
+    duration,
+    total_amount,
+    payment_method,
+    payment_status
+  )
+  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'UNPAID')
+  RETURNING *
+  `,
+  [
+    resource_id,
+    customerId,
+    booking_date,
+    start_time,
+    end_time,
+    durationInHours,
+    totalAmount,
+    payment_method
+  ]
     );
 
     // 12. Return booking
