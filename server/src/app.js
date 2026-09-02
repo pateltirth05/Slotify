@@ -32,4 +32,21 @@ app.use("/api/payments", paymentRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/owner", ownerEarningsRoutes);
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: "Route not found"
+  });
+});
+app.use((err, req, res, next) => {
+  console.error("Global error:", err);
+
+  res.status(err.status || 500).json({
+    success: false,
+    message:
+      err.status && err.message
+        ? err.message
+        : "Internal server error"
+  });
+});
 export default app;
