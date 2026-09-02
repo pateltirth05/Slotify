@@ -12,6 +12,12 @@ router.get(
   getMyBookings
 );
 router.get(
+  "/:id",
+  protect,
+  requireRole("CUSTOMER"),
+  getBookingById
+);
+router.get(
   "/owner",
   protect,
   requireRole("OWNER"),
@@ -29,12 +35,7 @@ router.patch(
   requireRole("OWNER"),
   updateBookingStatus
 );
-router.get(
-  "/:id",
-  protect,
-  requireRole("CUSTOMER"),
-  getBookingById
-);
+
 
 router.delete(
   "/:id",

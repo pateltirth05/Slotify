@@ -1,5 +1,5 @@
 import pool from "../config/db.js";
-
+import { createNotification } from "./notificationController.js";
 export const getAvailability = async (req, res) => {
   try {
     const { resourceId } = req.params;
@@ -404,54 +404,184 @@ export const getMyBookings = async (req, res) => {
   }
 };
 
+// export const getBookingById = async (req, res) => {
+//   try {
+//     const { id } = req.params;
+
+//     const result = await pool.query(
+//       `SELECT
+//         b.id,
+//         b.booking_date,
+//         b.start_time,
+//         b.end_time,
+//         b.duration,
+//         b.total_amount,
+//         b.status,
+//         b.created_at,
+//         r.id AS resource_id,
+//         r.name AS resource_name,
+//         r.sport_type,
+//         g.id AS ground_id,
+//         g.name AS ground_name,
+//         g.city,
+//         g.location
+//        FROM bookings b
+//        JOIN resources r
+//          ON b.resource_id = r.id
+//        JOIN grounds g
+//          ON r.ground_id = g.id
+//        WHERE b.id = $1
+//        AND b.customer_id = $2`,
+//       [id, req.user.userId]
+//     );
+
+//     if (result.rows.length === 0) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "Booking not found",
+//       });
+//     }
+
+//     return res.status(200).json({
+//       success: true,
+//       booking: result.rows[0],
+//     });
+//   } catch (error) {
+//     console.error("Failed to get booking:", error);
+
+//     return res.status(500).json({
+//       success: false,
+//       message: "Internal Server error",
+//     });
+//   }
+// };
+
 export const getBookingById = async (req, res) => {
   try {
-    const { id } = req.params;
+    const bookingId = req.params.id;
+    const customerId = req.user.userId;
 
     const result = await pool.query(
-      `SELECT
-        b.id,
+      `
+      SELECT
+        b.id AS booking_id,
         b.booking_date,
         b.start_time,
         b.end_time,
         b.duration,
         b.total_amount,
-        b.status,
-        b.created_at,
+        b.status AS booking_status,
+        b.payment_method,
+        b.payment_status,
+        b.created_at AS booking_created_at,
+        b.updated_at AS booking_updated_at,
+
+        u.id AS customer_id,
+        u.name AS customer_name,
+        u.email AS customer_email,
+
         r.id AS resource_id,
         r.name AS resource_name,
         r.sport_type,
+        r.price_per_hour,
+
         g.id AS ground_id,
         g.name AS ground_name,
-        g.city,
-        g.location
-       FROM bookings b
-       JOIN resources r
-         ON b.resource_id = r.id
-       JOIN grounds g
-         ON r.ground_id = g.id
-       WHERE b.id = $1
-       AND b.customer_id = $2`,
-      [id, req.user.userId]
+        g.location AS ground_location,
+
+        p.id AS payment_id,
+        p.razorpay_order_id,
+        p.razorpay_payment_id,
+        p.status AS payment_record_status,
+        p.created_at AS payment_created_at
+
+      FROM bookings b
+
+      JOIN users u
+        ON b.customer_id = u.id
+
+      JOIN resources r
+        ON b.resource_id = r.id
+
+      JOIN grounds g
+        ON r.ground_id = g.id
+
+      LEFT JOIN payments p
+        ON p.booking_id = b.id
+
+      WHERE b.id = $1
+        AND b.customer_id = $2
+
+      LIMIT 1
+      `,
+      [bookingId, customerId]
     );
 
     if (result.rows.length === 0) {
       return res.status(404).json({
         success: false,
-        message: "Booking not found",
+        message: "Booking not found"
       });
     }
 
-    return res.status(200).json({
-      success: true,
-      booking: result.rows[0],
-    });
-  } catch (error) {
-    console.error("Failed to get booking:", error);
+    const booking = result.rows[0];
 
-    return res.status(500).json({
+    res.status(200).json({
+      success: true,
+      booking: {
+        id: booking.booking_id,
+
+        ground: {
+          id: booking.ground_id,
+          name: booking.ground_name,
+          location: booking.ground_location
+        },
+
+        resource: {
+          id: booking.resource_id,
+          name: booking.resource_name,
+          sport_type: booking.sport_type
+        },
+
+        customer: {
+          id: booking.customer_id,
+          name: booking.customer_name,
+          email: booking.customer_email
+        },
+
+        date: booking.booking_date,
+        start_time: booking.start_time,
+        end_time: booking.end_time,
+        duration: Number(booking.duration),
+
+        pricing: {
+          price_per_hour: Number(booking.price_per_hour),
+          total_amount: Number(booking.total_amount)
+        },
+
+        booking_status: booking.booking_status,
+
+        payment: {
+          method: booking.payment_method,
+          status: booking.payment_status,
+          payment_id: booking.payment_id,
+          razorpay_order_id: booking.razorpay_order_id,
+          razorpay_payment_id: booking.razorpay_payment_id,
+          payment_record_status: booking.payment_record_status,
+          paid_at: booking.payment_created_at
+        },
+
+        created_at: booking.booking_created_at,
+        updated_at: booking.booking_updated_at
+      }
+    });
+
+  } catch (error) {
+    console.error("Get booking details error:", error);
+
+    res.status(500).json({
       success: false,
-      message: "Internal Server error",
+      message: "Failed to get booking details"
     });
   }
 };
@@ -462,12 +592,22 @@ export const cancelBooking = async (req, res) => {
 
     // Find booking belonging to the logged-in customer
     const bookingResult = await pool.query(
-      `SELECT *
-       FROM bookings
-       WHERE id = $1
-       AND customer_id = $2`,
-      [id, req.user.userId]
-    );
+  `
+  SELECT
+    b.*,
+    r.name AS resource_name,
+    g.name AS ground_name,
+    g.owner_id
+  FROM bookings b
+  JOIN resources r
+    ON r.id = b.resource_id
+  JOIN grounds g
+    ON g.id = r.ground_id
+  WHERE b.id = $1
+    AND b.customer_id = $2
+  `,
+  [id, req.user.userId]
+);
 
     if (bookingResult.rows.length === 0) {
       return res.status(404).json({
@@ -503,7 +643,21 @@ export const cancelBooking = async (req, res) => {
        RETURNING *`,
       [id]
     );
+await createNotification({
+  userId: req.user.userId,
+  bookingId: booking.id,
+  type: "BOOKING_CANCELLED",
+  title: "Booking Cancelled",
+  message: `Your booking for ${booking.resource_name} at ${booking.ground_name} has been cancelled.`
+});
 
+await createNotification({
+  userId: booking.owner_id,
+  bookingId: booking.id,
+  type: "BOOKING_CANCELLED",
+  title: "Booking Cancelled",
+  message: `A customer has cancelled the booking for ${booking.resource_name} at ${booking.ground_name}.`
+});
     return res.status(200).json({
       success: true,
       message: "Booking cancelled successfully",

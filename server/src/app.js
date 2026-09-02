@@ -8,6 +8,7 @@ import availabilityBlockRoutes from "./routes/availabilityBlockRoutes.js";
 import userRoutes from "./routes/userRoutes.js"
 import ownerPaymentRoutes from "./routes/ownerPaymentRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
 const app=express()
 
 app.use(express.json())
@@ -26,4 +27,5 @@ app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/availability-blocks", availabilityBlockRoutes);
 app.use("/api/owner-payment", ownerPaymentRoutes);
 app.use("/api/payments", paymentRoutes);
+app.use("/api/notifications", notificationRoutes);
 export default app;
