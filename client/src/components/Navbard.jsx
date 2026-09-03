@@ -13,9 +13,9 @@ const Navbard = () => {
    <>
   <nav className="navbar">
   <div className="navbar__inner">
-    <a href="home.html" className="navbar__brand">
+    <Link to={"/"} className="navbar__brand">
       SLOTIFY<span className="dot" style={{ marginLeft: '6px' }}></span>
-    </a>
+    </Link>
     <ul className="navbar__links">
       <li> <Link
             to="/grounds"
@@ -51,17 +51,22 @@ const Navbard = () => {
        </>  
     ):(
              <>
-              <Link to="/profile" className="navbar__profile">
-                Profile
-              </Link>
+             
 
-              <button
-                type="button"
-                className="navbar__logout"
-                onClick={logout}
-              >
-                Logout
-              </button>
+              <div className="navbar__actions">
+  {user && (
+    <Link to="/profile" className="navbar__avatar">
+      {user.name
+        ? user.name
+            .split(" ")
+            .map((part) => part.charAt(0))
+            .join("")
+            .slice(0, 2)
+            .toUpperCase()
+        : "U"}
+    </Link>
+  )}
+</div>
             </>
           )
 }

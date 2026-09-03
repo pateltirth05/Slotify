@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import "../../style/style.css";
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-
+import { useLocation } from "react-router-dom";
 const Login = () => {
     const navigate=useNavigate();
     const {login}=useAuth();
@@ -10,6 +10,8 @@ const Login = () => {
     email: "",
     password: "",
   });
+  const location = useLocation();
+
      const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const handleChange = (event) => {
@@ -30,15 +32,23 @@ const Login = () => {
 
       const data = await login(formData);
 
-      if (data.user.role === "CUSTOMER") {
-        navigate("/customer/dashboard");
-      } else if (data.user.role === "OWNER") {
-        navigate("/owner/dashboard");
-      } else if (data.user.role === "ADMIN") {
-        navigate("/admin/dashboard");
-      } else {
-        setError("Invalid user role.");
-      }
+      const redirectTo = location.state?.redirectTo;
+const bookingData = location.state?.bookingData;
+
+if (redirectTo) {
+  navigate(redirectTo, {
+    state: bookingData,
+    replace: true,
+  });
+} else if (data.user.role === "CUSTOMER") {
+  navigate("/");
+} else if (data.user.role === "OWNER") {
+  navigate("/owner/dashboard");
+} else if (data.user.role === "ADMIN") {
+  navigate("/admin/dashboard");
+} else {
+  setError("Invalid user role.");
+}
     } catch (error) {
       console.error("Login error:", error);
 
@@ -50,6 +60,7 @@ const Login = () => {
       setLoading(false);
     }
   };
+  
   return (
     <>
    <div className="auth-shell">

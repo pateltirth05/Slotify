@@ -447,9 +447,22 @@ const { user } = useAuth();
       return;
     }
  if (!user) {
-    navigate("/login");
-    return;
-  }
+  navigate("/login", {
+    state: {
+      redirectTo: `/grounds/${groundId}/resources/${resourceId}/booking`,
+      bookingData: {
+        resource,
+        selectedDate,
+        startTime,
+        endTime,
+        duration,
+        totalAmount,
+      },
+    },
+  });
+
+  return;
+}
     /*
       For now we only move to the next booking step.
       Payment page will be connected later.
