@@ -11,6 +11,7 @@ import RoleRoute from "./RoleRoute.jsx";
 import Register from "../pages/auth/Register.jsx";
 import Home from "../pages/Home.jsx";
 import Construction from "../pages/Construction.jsx";
+import Grounds from "../pages/Grounds.jsx";
 
 
 
@@ -56,16 +57,16 @@ function AppRoutes() {
         />
         <Route path="/construction" element={<Construction/>}/>
 
+            <Route
+              path="/grounds"
+              element={<Grounds />}
+            />
         {/* Logged-in users */}
         <Route element={<ProtectedRoute />}>
 
           {/* Customer */}
           <Route element={<RoleRoute allowedRoles={["CUSTOMER"]} />}>
 
-            <Route
-              path="/customer/dashboard"
-              element={<CustomerDashboard />}
-            />
 
           </Route>
 

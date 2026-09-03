@@ -66,11 +66,24 @@ export const getGrounds = async (req, res) => {
     } = req.query;
 
     let query = `
-      SELECT DISTINCT
-        g.*
+      SELECT
+        g.*,
+        COALESCE(
+          json_agg(
+            json_build_object(
+              'id', r.id,
+              'sport_type', r.sport_type,
+              'price_per_hour', r.price_per_hour,
+              'opening_time', r.opening_time,
+              'closing_time', r.closing_time
+            )
+          ) FILTER (WHERE r.id IS NOT NULL),
+          '[]'
+        ) AS resources
       FROM grounds g
       LEFT JOIN resources r
         ON r.ground_id = g.id
+        AND r.status = 'ACTIVE'
       WHERE g.status = 'ACTIVE'
     `;
 
@@ -105,7 +118,10 @@ export const getGrounds = async (req, res) => {
       paramIndex++;
     }
 
-    query += ` ORDER BY g.created_at DESC`;
+    query += `
+      GROUP BY g.id
+      ORDER BY g.created_at DESC
+    `;
 
     const result = await pool.query(query, values);
 
@@ -122,7 +138,6 @@ export const getGrounds = async (req, res) => {
     });
   }
 };
-
 export const getGroundById=async(req,res)=>{
     try {
         const {id}=req.params;
