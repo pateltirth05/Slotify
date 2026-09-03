@@ -11,6 +11,7 @@ import paymentRoutes from "./routes/paymentRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import ownerEarningsRoutes from "./routes/ownerEarningsRoutes.js";
+import availabilityRoutes from "./routes/availabilityRoutes.js";
 import cors from "cors"
 const app=express()
 app.use(cors({
@@ -28,7 +29,10 @@ app.use("/api/users", userRoutes);
 app.use("/api/grounds",groundRoutes)
 app.use("/api/resources",resourceRoutes)
 app.use("/api/bookings", bookingRoutes);
-
+app.use(
+  "/api/availability",
+  availabilityRoutes
+);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/availability-blocks", availabilityBlockRoutes);
 app.use("/api/owner-payment", ownerPaymentRoutes);

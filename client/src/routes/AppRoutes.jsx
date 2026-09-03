@@ -12,6 +12,8 @@ import Register from "../pages/auth/Register.jsx";
 import Home from "../pages/Home.jsx";
 import Construction from "../pages/Construction.jsx";
 import Grounds from "../pages/Grounds.jsx";
+import GroundDetails from "../pages/GroundDetails.jsx";
+import ResourseBooking from "../pages/ResourseBooking.jsx";
 
 
 
@@ -61,6 +63,11 @@ function AppRoutes() {
               path="/grounds"
               element={<Grounds />}
             />
+            <Route path="/grounds/:id" element={<GroundDetails/>}/>
+            <Route
+  path="/grounds/:groundId/resources/:resourceId"
+  element={<ResourseBooking />}
+/>
         {/* Logged-in users */}
         <Route element={<ProtectedRoute />}>
 

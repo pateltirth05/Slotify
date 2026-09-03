@@ -138,33 +138,59 @@ export const getGrounds = async (req, res) => {
     });
   }
 };
-export const getGroundById=async(req,res)=>{
-    try {
-        const {id}=req.params;
-       
-        const result =await pool.query(
-            `SELECT * FROM grounds WHERE id = $1`,[id]
-        )
-        if(result.rows.length===0)
-        {
-            return res.status(404).json({
+export const getGroundById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await pool.query(
+      `
+      SELECT
+        g.*,
+        COALESCE(
+          json_agg(
+            json_build_object(
+              'id', r.id,
+              'name', r.name,
+              'sport_type', r.sport_type,
+              'price_per_hour', r.price_per_hour,
+              'opening_time', r.opening_time,
+              'closing_time', r.closing_time,
+              'status', r.status,
+              'photos', r.photos
+            )
+          ) FILTER (WHERE r.id IS NOT NULL),
+          '[]'
+        ) AS resources
+      FROM grounds g
+      LEFT JOIN resources r
+        ON r.ground_id = g.id
+        AND r.status = 'ACTIVE'
+      WHERE g.id = $1
+      GROUP BY g.id
+      `,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
         success: false,
         message: "Ground not found",
       });
-        }
-        return res.status(200).json({
-            success:true,
-            ground:result.rows[0]
-        })
-    } catch (error) {
-         console.error("Get ground error:", error);
+    }
+
+    return res.status(200).json({
+      success: true,
+      ground: result.rows[0],
+    });
+  } catch (error) {
+    console.error("Get ground error:", error);
 
     return res.status(500).json({
       success: false,
       message: "Internal server error",
     });
-     }
-    }
+  }
+};
 
     export const updateGround=async(req,res)=>{
         try {

@@ -43,4 +43,5 @@ router.delete(
   requireRole("CUSTOMER"),
   cancelBooking
 );
+
 export default router;
