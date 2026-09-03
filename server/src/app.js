@@ -11,8 +11,12 @@ import paymentRoutes from "./routes/paymentRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import ownerEarningsRoutes from "./routes/ownerEarningsRoutes.js";
+import cors from "cors"
 const app=express()
-
+app.use(cors({
+  origin: "http://localhost:5173", // Replace with your frontend URL
+  credentials: true
+}));
 app.use(express.json())
 
 app.get("/health",(req,res)=>{

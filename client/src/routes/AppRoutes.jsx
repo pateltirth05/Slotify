@@ -9,11 +9,11 @@ import Login from "../pages/auth/Login.jsx";
 import ProtectedRoute from "./ProtectedRoute.jsx";
 import RoleRoute from "./RoleRoute.jsx";
 import Register from "../pages/auth/Register.jsx";
+import Home from "../pages/Home.jsx";
+import Construction from "../pages/Construction.jsx";
 
 
-function Home() {
-  return <h1>Slotify Home</h1>;
-}
+
 
 
 
@@ -54,7 +54,7 @@ function AppRoutes() {
           path="/register"
           element={<Register />}
         />
-
+        <Route path="/construction" element={<Construction/>}/>
 
         {/* Logged-in users */}
         <Route element={<ProtectedRoute />}>
