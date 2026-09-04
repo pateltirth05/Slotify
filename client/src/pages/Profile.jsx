@@ -11,7 +11,7 @@ const Profile = () => {
   const [profile, setProfile] = useState({
     name: "",
     email: "",
-    phone: "",
+   
   });
 
   const [passwordData, setPasswordData] = useState({
@@ -41,7 +41,7 @@ const Profile = () => {
         setProfile({
           name: currentUser.name || "",
           email: currentUser.email || "",
-          phone: currentUser.phone || "",
+        
         });
       } catch (error) {
         console.error("Get profile error:", error);
@@ -102,7 +102,7 @@ const Profile = () => {
       const response = await api.put("/users/me", {
         name: profile.name,
         email: profile.email,
-        phone: profile.phone,
+       
       });
 
       setProfile(response.data.user);
@@ -304,16 +304,7 @@ const Profile = () => {
                   />
                 </div>
 
-                <div className="field">
-                  <label>Phone number</label>
-
-                  <input
-                    type="tel"
-                    name="phone"
-                    value={profile.phone}
-                    onChange={handleProfileChange}
-                  />
-                </div>
+                
 
                 {profileMessage && (
                   <p

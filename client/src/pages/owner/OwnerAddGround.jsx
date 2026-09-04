@@ -88,65 +88,96 @@ function OwnerAddGround() {
     setImages(selectedFiles);
   };
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
+const handleSubmit = async (event) => {
+  event.preventDefault();
 
-    setError("");
+  setError("");
 
-    if (!formData.name.trim()) {
-      setError("Ground name is required.");
-      return;
+  if (!formData.name.trim()) {
+    setError("Ground name is required.");
+    return;
+  }
+
+  if (!formData.description.trim()) {
+    setError("Description is required.");
+    return;
+  }
+
+  if (!formData.location.trim()) {
+    setError("Location is required.");
+    return;
+  }
+
+  if (!formData.city.trim()) {
+    setError("City is required.");
+    return;
+  }
+
+  if (selectedSports.length === 0) {
+    setError("Please select at least one sport.");
+    return;
+  }
+
+  if (formData.facilities.length === 0) {
+    setError("Please select at least one facility.");
+    return;
+  }
+
+  try {
+    setLoading(true);
+
+    // -----------------------------------
+    // STEP 1: Create the ground
+    // -----------------------------------
+
+    const response = await api.post("/grounds", {
+      name: formData.name,
+      description: formData.description,
+      location: formData.location,
+      city: formData.city,
+      facilities: formData.facilities,
+    });
+
+    const createdGround = response.data.ground;
+
+    // -----------------------------------
+    // STEP 2: Upload ground photos
+    // -----------------------------------
+
+    if (images.length > 0) {
+      for (const image of images) {
+        const imageData = new FormData();
+
+        imageData.append("photo", image);
+
+        await api.post(
+          `/grounds/${createdGround.id}/photos`,
+          imageData,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
+          }
+        );
+      }
     }
 
-    if (!formData.location.trim()) {
-      setError("Location is required.");
-      return;
-    }
+    // -----------------------------------
+    // STEP 3: Go to ground details
+    // -----------------------------------
 
-    if (selectedSports.length === 0) {
-      setError("Please select at least one sport.");
-      return;
-    }
+    navigate(`/owner/grounds/${createdGround.id}`);
+  } catch (error) {
+    console.error("Create ground error:", error);
 
-    try {
-      setLoading(true);
-
-      const data = new FormData();
-
-      data.append("name", formData.name);
-      data.append("description", formData.description);
-      data.append("location", formData.location);
-      data.append("city", formData.city);
-      data.append("status", formData.status);
-
-      formData.facilities.forEach((facility) => {
-        data.append("facilities", facility);
-      });
-
-      images.forEach((image) => {
-        data.append("images", image);
-      });
-
-      const response = await api.post("/grounds", data, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
-
-      const createdGround = response.data.ground;
-
-      navigate(`/owner/grounds/${createdGround.id}`);
-    } catch (error) {
-      console.error("Create ground error:", error);
-
-      setError(
-        error.response?.data?.message ||
-          "Failed to create ground."
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+    setError(
+      error.response?.data?.message ||
+        "Failed to create ground."
+    );
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="admin-shell">

@@ -1,196 +1,162 @@
-import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
-import OwnerSidebar from "../../components/owner/OwnerSidebar.jsx";
-import api from "../../services/api.js";
+import { useEffect, useState } from "react";
+import api from "../../services/api";
+import OwnerSidebar from "../../components/owner/OwnerSidebar";
 import "../../style/owner.css"
 import "../../style/admin.css"
 import "../../style/style.css"
-function OwnerAvailability() {
-  const [searchParams] = useSearchParams();
 
-  const today = new Date().toISOString().split("T")[0];
-
+const OwnerAvailability = () => {
   const [grounds, setGrounds] = useState([]);
   const [resources, setResources] = useState([]);
 
-  const [selectedGround, setSelectedGround] = useState(
-    searchParams.get("groundId") || ""
-  );
-
-  const [selectedResource, setSelectedResource] = useState(
-    searchParams.get("resourceId") || ""
-  );
+  const [selectedGround, setSelectedGround] = useState("");
+  const [selectedResource, setSelectedResource] = useState("");
 
   const [selectedDate, setSelectedDate] = useState(
-    searchParams.get("date") || today
+    new Date().toISOString().split("T")[0]
   );
 
   const [availability, setAvailability] = useState(null);
 
-  const [loading, setLoading] = useState(false);
+  const [loadingGrounds, setLoadingGrounds] = useState(true);
+  const [loadingResources, setLoadingResources] = useState(false);
+  const [loadingAvailability, setLoadingAvailability] =
+    useState(false);
 
-  const [showModal, setShowModal] = useState(false);
+  const [showBlockTimeModal, setShowBlockTimeModal] =
+    useState(false);
 
-  const [blockType, setBlockType] = useState("TIME");
+  const [showBlockDateModal, setShowBlockDateModal] =
+    useState(false);
 
-  const [blockForm, setBlockForm] = useState({
-    date: searchParams.get("date") || today,
-    start_time: "13:00",
-    end_time: "14:00",
+  const [blockTimeForm, setBlockTimeForm] = useState({
+    date: new Date().toISOString().split("T")[0],
+    startTime: "13:00",
+    endTime: "14:00",
     reason: "",
   });
 
-  // ==========================================
-  // GET OWNER GROUNDS
-  // ==========================================
+  const [blockDateForm, setBlockDateForm] = useState({
+    date: "",
+    reason: "",
+  });
 
-useEffect(() => {
-  const fetchGrounds = async () => {
+  // --------------------------------------------------
+  // LOAD GROUNDS
+  // --------------------------------------------------
+
+  useEffect(() => {
+    loadGrounds();
+  }, []);
+
+  const loadGrounds = async () => {
     try {
+      setLoadingGrounds(true);
+
       const response = await api.get("/owner/grounds");
 
-      const groundList = response.data.grounds || [];
+      const data = response.data?.grounds || [];
 
-      setGrounds(groundList);
+      setGrounds(data);
 
-      // If URL does not provide a ground,
-      // automatically select the first ground.
-      if (!selectedGround && groundList.length > 0) {
-        setSelectedGround(String(groundList[0].id));
+      if (data.length > 0) {
+        setSelectedGround(String(data[0].id));
       }
     } catch (error) {
-      console.error("Get owner grounds error:", error);
-
-      alert(
-        error.response?.data?.message ||
-          "Failed to load grounds"
-      );
+      console.error("Failed to load grounds:", error);
+    } finally {
+      setLoadingGrounds(false);
     }
   };
 
-  fetchGrounds();
-}, []);
-
-  // ==========================================
-  // GET RESOURCES FOR SELECTED GROUND
-  // ==========================================
+  // --------------------------------------------------
+  // LOAD RESOURCES
+  // --------------------------------------------------
 
   useEffect(() => {
-    const fetchResources = async () => {
-      if (!selectedGround) {
-        setResources([]);
-        setSelectedResource("");
-        return;
-      }
+    if (!selectedGround) {
+      setResources([]);
+      setSelectedResource("");
+      return;
+    }
 
-      try {
-        const response = await api.get(
-          `/resources/ground/${selectedGround}`
-        );
-
-        const resourceList = response.data.resources || [];
-
-        setResources(resourceList);
-
-        const resourceFromUrl =
-          searchParams.get("resourceId");
-
-        const resourceExists = resourceList.some(
-          (resource) =>
-            String(resource.id) ===
-            String(resourceFromUrl)
-        );
-
-        if (resourceFromUrl && resourceExists) {
-          setSelectedResource(resourceFromUrl);
-        } else if (resourceList.length > 0) {
-          setSelectedResource(String(resourceList[0].id));
-        } else {
-          setSelectedResource("");
-        }
-      } catch (error) {
-        console.error("Get resources error:", error);
-
-        setResources([]);
-        setSelectedResource("");
-
-        alert(
-          error.response?.data?.message ||
-            "Failed to load resources"
-        );
-      }
-    };
-
-    fetchResources();
+    loadResources();
   }, [selectedGround]);
 
-  // ==========================================
-  // GET AVAILABILITY
-  // ==========================================
+  const loadResources = async () => {
+    try {
+      setLoadingResources(true);
+
+      const response = await api.get(
+        `/resources/ground/${selectedGround}`
+      );
+
+      const data = response.data?.resources || [];
+
+      setResources(data);
+
+      if (data.length > 0) {
+        setSelectedResource(String(data[0].id));
+      } else {
+        setSelectedResource("");
+      }
+    } catch (error) {
+      console.error("Failed to load resources:", error);
+
+      setResources([]);
+      setSelectedResource("");
+    } finally {
+      setLoadingResources(false);
+    }
+  };
+
+  // --------------------------------------------------
+  // LOAD AVAILABILITY
+  // --------------------------------------------------
 
   useEffect(() => {
-    const fetchAvailability = async () => {
-      if (!selectedResource || !selectedDate) {
-        setAvailability(null);
-        return;
-      }
+    if (!selectedResource || !selectedDate) {
+      setAvailability(null);
+      return;
+    }
 
-      try {
-        setLoading(true);
-
-        const response = await api.get(
-          `/availability/${selectedResource}?date=${selectedDate}`
-        );
-
-        setAvailability(response.data);
-      } catch (error) {
-        console.error("Get availability error:", error);
-
-        setAvailability(null);
-
-        alert(
-          error.response?.data?.message ||
-            "Failed to load availability"
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAvailability();
+    loadAvailability();
   }, [selectedResource, selectedDate]);
 
-  // ==========================================
-  // CURRENT GROUND
-  // ==========================================
+  const loadAvailability = async () => {
+    try {
+      setLoadingAvailability(true);
 
-  const currentGround = useMemo(() => {
-    return grounds.find(
-      (ground) =>
-        String(ground.id) === String(selectedGround)
-    );
-  }, [grounds, selectedGround]);
+      const response = await api.get(
+        `/availability/${selectedResource}?date=${selectedDate}`
+      );
 
-  // ==========================================
-  // CURRENT RESOURCE
-  // ==========================================
+      console.log(
+        "OWNER AVAILABILITY RESPONSE:",
+        response.data
+      );
 
-  const currentResource = useMemo(() => {
-    return resources.find(
-      (resource) =>
-        String(resource.id) === String(selectedResource)
-    );
-  }, [resources, selectedResource]);
+      setAvailability(response.data);
+    } catch (error) {
+      console.error(
+        "Failed to load availability:",
+        error
+      );
 
-  // ==========================================
+      setAvailability(null);
+    } finally {
+      setLoadingAvailability(false);
+    }
+  };
+
+  // --------------------------------------------------
   // TIME HELPERS
-  // ==========================================
+  // --------------------------------------------------
 
   const timeToMinutes = (time) => {
     if (!time) return 0;
 
     const [hours, minutes] = time
-      .slice(0, 5)
       .split(":")
       .map(Number);
 
@@ -210,136 +176,169 @@ useEffect(() => {
     if (!time) return "";
 
     const [hours, minutes] = time
-      .slice(0, 5)
       .split(":")
       .map(Number);
 
-    const date = new Date();
+    const period = hours >= 12 ? "PM" : "AM";
 
-    date.setHours(hours, minutes, 0, 0);
+    const displayHour =
+      hours % 12 === 0 ? 12 : hours % 12;
 
-    return date.toLocaleTimeString("en-IN", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
-    });
+    return `${String(displayHour).padStart(
+      2,
+      "0"
+    )}:${String(minutes).padStart(2, "0")} ${period}`;
   };
 
-  // ==========================================
-  // TIMELINE
-  // ==========================================
+  // --------------------------------------------------
+  // OPERATING HOURS
+  // --------------------------------------------------
 
-  const timelineSlots = useMemo(() => {
-    if (!availability?.operatingHours) {
+  const getOpeningTime = () => {
+    return (
+      availability?.resource?.opening_time ||
+      availability?.operating_hours?.opening_time ||
+      availability?.operatingHours?.opening_time ||
+      null
+    );
+  };
+
+  const getClosingTime = () => {
+    return (
+      availability?.resource?.closing_time ||
+      availability?.operating_hours?.closing_time ||
+      availability?.operatingHours?.closing_time ||
+      null
+    );
+  };
+
+  // --------------------------------------------------
+  // CREATE HOURLY TIMELINE
+  // --------------------------------------------------
+
+  const createTimeline = () => {
+    const openingTime = getOpeningTime();
+    const closingTime = getClosingTime();
+
+    if (!openingTime || !closingTime) {
       return [];
     }
 
-    const openingTime =
-      availability.operatingHours.opening_time;
+    const openingMinutes =
+      timeToMinutes(openingTime);
 
-    const closingTime =
-      availability.operatingHours.closing_time;
-
-    const openingMinutes = timeToMinutes(openingTime);
-    const closingMinutes = timeToMinutes(closingTime);
+    const closingMinutes =
+      timeToMinutes(closingTime);
 
     const slots = [];
 
-    for (
-      let current = openingMinutes;
-      current < closingMinutes;
-      current += 60
-    ) {
-      const slotEnd = Math.min(
+    let current = openingMinutes;
+
+    while (current < closingMinutes) {
+      const next = Math.min(
         current + 60,
         closingMinutes
       );
 
-      const startTime = minutesToTime(current);
-
-      const isBooked = (
-        availability.booked || []
-      ).some((booking) => {
-        return (
-          timeToMinutes(booking.start_time) <
-            slotEnd &&
-          timeToMinutes(booking.end_time) >
-            current
-        );
-      });
-
-      const isBlocked = (
-        availability.blocked || []
-      ).some((block) => {
-        return (
-          timeToMinutes(block.start_time) <
-            slotEnd &&
-          timeToMinutes(block.end_time) >
-            current
-        );
-      });
-
-      let status = "available";
-
-      if (isBooked) {
-        status = "booked";
-      } else if (isBlocked) {
-        status = "blocked";
-      }
-
       slots.push({
-        startTime,
-        status,
+        start: minutesToTime(current),
+        end: minutesToTime(next),
       });
+
+      current = next;
     }
 
     return slots;
-  }, [availability]);
-
-  // ==========================================
-  // OPEN MODAL
-  // ==========================================
-
-  const openBlockModal = (type) => {
-    if (!selectedResource) {
-      alert("Please select a resource first.");
-      return;
-    }
-
-    setBlockType(type);
-
-    setBlockForm({
-      date: selectedDate,
-      start_time:
-        currentResource?.opening_time?.slice(0, 5) ||
-        "13:00",
-      end_time:
-        currentResource?.closing_time?.slice(0, 5) ||
-        "14:00",
-      reason: "",
-    });
-
-    setShowModal(true);
   };
 
-  // ==========================================
-  // BLOCK FORM CHANGE
-  // ==========================================
+  // --------------------------------------------------
+  // CHECK IF SLOT IS BOOKED
+  // --------------------------------------------------
 
-  const handleBlockChange = (event) => {
+  const isBooked = (slotStart, slotEnd) => {
+    const bookedSlots =
+      availability?.booked_slots || [];
+
+    const start = timeToMinutes(slotStart);
+    const end = timeToMinutes(slotEnd);
+
+    return bookedSlots.some((booking) => {
+      const bookingStart = timeToMinutes(
+        booking.start_time
+      );
+
+      const bookingEnd = timeToMinutes(
+        booking.end_time
+      );
+
+      return (
+        start < bookingEnd &&
+        end > bookingStart
+      );
+    });
+  };
+
+  // --------------------------------------------------
+  // CHECK IF SLOT IS BLOCKED
+  // --------------------------------------------------
+
+  const isBlocked = (slotStart, slotEnd) => {
+    const blockedSlots =
+      availability?.blocked_slots || [];
+
+    const start = timeToMinutes(slotStart);
+    const end = timeToMinutes(slotEnd);
+
+    return blockedSlots.some((block) => {
+      const blockStart = timeToMinutes(
+        block.start_time
+      );
+
+      const blockEnd = timeToMinutes(
+        block.end_time
+      );
+
+      return (
+        start < blockEnd &&
+        end > blockStart
+      );
+    });
+  };
+
+  // --------------------------------------------------
+  // GET SLOT STATUS
+  // --------------------------------------------------
+
+  const getSlotStatus = (slot) => {
+    if (isBooked(slot.start, slot.end)) {
+      return "booked";
+    }
+
+    if (isBlocked(slot.start, slot.end)) {
+      return "blocked";
+    }
+
+    return "available";
+  };
+
+  // --------------------------------------------------
+  // BLOCK TIME FORM
+  // --------------------------------------------------
+
+  const handleBlockTimeChange = (event) => {
     const { name, value } = event.target;
 
-    setBlockForm((previous) => ({
+    setBlockTimeForm((previous) => ({
       ...previous,
       [name]: value,
     }));
   };
 
-  // ==========================================
-  // CREATE BLOCK
-  // ==========================================
+  // --------------------------------------------------
+  // CREATE TIME BLOCK
+  // --------------------------------------------------
 
-  const handleCreateBlock = async (event) => {
+  const handleBlockTimeSubmit = async (event) => {
     event.preventDefault();
 
     if (!selectedResource) {
@@ -347,57 +346,122 @@ useEffect(() => {
       return;
     }
 
-    let startTime = blockForm.start_time;
-    let endTime = blockForm.end_time;
-
-    if (blockType === "FULL_DAY") {
-      startTime =
-        currentResource?.opening_time?.slice(0, 5);
-
-      endTime =
-        currentResource?.closing_time?.slice(0, 5);
-    }
-
-    if (!startTime || !endTime) {
-      alert("Resource operating hours are unavailable.");
+    if (
+      timeToMinutes(blockTimeForm.startTime) >=
+      timeToMinutes(blockTimeForm.endTime)
+    ) {
+      alert("End time must be after start time.");
       return;
     }
 
     try {
       await api.post("/availability-blocks", {
         resource_id: Number(selectedResource),
-        block_date: blockForm.date,
-        start_time: startTime,
-        end_time: endTime,
-        reason: blockForm.reason || null,
+        block_date: blockTimeForm.date,
+        start_time: blockTimeForm.startTime,
+        end_time: blockTimeForm.endTime,
+        reason:
+          blockTimeForm.reason.trim() ||
+          "Unavailable",
       });
 
-      setShowModal(false);
+      setShowBlockTimeModal(false);
 
-      setSelectedDate(blockForm.date);
+      setSelectedDate(blockTimeForm.date);
 
-      const response = await api.get(
-        `/availability/${selectedResource}?date=${blockForm.date}`
-      );
+      setBlockTimeForm({
+        date: blockTimeForm.date,
+        startTime: "13:00",
+        endTime: "14:00",
+        reason: "",
+      });
 
-      setAvailability(response.data);
+      await loadAvailability();
     } catch (error) {
-      console.error("Create block error:", error);
+      console.error(
+        "Failed to create time block:",
+        error
+      );
 
       alert(
         error.response?.data?.message ||
-          "Failed to block availability"
+          "Failed to block this time."
       );
     }
   };
 
-  // ==========================================
+  // --------------------------------------------------
+  // BLOCK DATE
+  // --------------------------------------------------
+
+  const handleBlockDateChange = (event) => {
+    const { name, value } = event.target;
+
+    setBlockDateForm((previous) => ({
+      ...previous,
+      [name]: value,
+    }));
+  };
+
+  const handleBlockDateSubmit = async (event) => {
+    event.preventDefault();
+
+    if (!selectedResource) {
+      alert("Please select a resource.");
+      return;
+    }
+
+    try {
+      const openingTime = getOpeningTime();
+      const closingTime = getClosingTime();
+
+      if (!openingTime || !closingTime) {
+        alert(
+          "Operating hours are not available for this resource."
+        );
+        return;
+      }
+
+      await api.post("/availability-blocks", {
+        resource_id: Number(selectedResource),
+        block_date: blockDateForm.date,
+        start_time: openingTime,
+        end_time: closingTime,
+        reason:
+          blockDateForm.reason.trim() ||
+          "Private Event",
+      });
+
+      setShowBlockDateModal(false);
+
+      setSelectedDate(blockDateForm.date);
+
+      setBlockDateForm({
+        date: "",
+        reason: "",
+      });
+
+      await loadAvailability();
+    } catch (error) {
+      console.error(
+        "Failed to block date:",
+        error
+      );
+
+      alert(
+        error.response?.data?.message ||
+          "Failed to block this date."
+      );
+    }
+  };
+
+  // --------------------------------------------------
   // DELETE BLOCK
-  // ==========================================
+  // --------------------------------------------------
 
   const handleDeleteBlock = async (blockId) => {
     const confirmed = window.confirm(
-      "Are you sure you want to remove this availability block?"
+      "Remove this blocked period?"
     );
 
     if (!confirmed) return;
@@ -407,30 +471,44 @@ useEffect(() => {
         `/availability-blocks/${blockId}`
       );
 
-      const response = await api.get(
-        `/availability/${selectedResource}?date=${selectedDate}`
-      );
-
-      setAvailability(response.data);
+      await loadAvailability();
     } catch (error) {
-      console.error("Delete block error:", error);
+      console.error(
+        "Failed to delete block:",
+        error
+      );
 
       alert(
         error.response?.data?.message ||
-          "Failed to remove availability block"
+          "Failed to remove block."
       );
     }
   };
 
+  // --------------------------------------------------
+  // DATA
+  // --------------------------------------------------
+
+  const timeline = createTimeline();
+
+  const selectedGroundData = grounds.find(
+    (ground) =>
+      String(ground.id) === String(selectedGround)
+  );
+
+  const selectedResourceData = resources.find(
+    (resource) =>
+      String(resource.id) ===
+      String(selectedResource)
+  );
+
   return (
-    <>
-     <div className="admin-shell">
+    <div className="admin-shell">
       <OwnerSidebar />
-      
 
       <main className="admin-main">
 
-        {/* TOPBAR */}
+        {/* TOP BAR */}
 
         <div className="admin-topbar">
 
@@ -448,9 +526,14 @@ useEffect(() => {
             <button
               className="btn btn--outline btn--sm"
               type="button"
-              onClick={() =>
-                openBlockModal("FULL_DAY")
-              }
+              onClick={() => {
+                setBlockDateForm({
+                  date: selectedDate,
+                  reason: "",
+                });
+
+                setShowBlockDateModal(true);
+              }}
             >
               + Block Date
             </button>
@@ -458,9 +541,16 @@ useEffect(() => {
             <button
               className="btn btn--primary btn--sm"
               type="button"
-              onClick={() =>
-                openBlockModal("TIME")
-              }
+              onClick={() => {
+                setBlockTimeForm({
+                  date: selectedDate,
+                  startTime: "13:00",
+                  endTime: "14:00",
+                  reason: "",
+                });
+
+                setShowBlockTimeModal(true);
+              }}
             >
               + Block Time
             </button>
@@ -481,15 +571,12 @@ useEffect(() => {
 
               <select
                 value={selectedGround}
-                onChange={(event) => {
+                onChange={(event) =>
                   setSelectedGround(
                     event.target.value
-                  );
-
-                  setSelectedResource("");
-
-                  setAvailability(null);
-                }}
+                  )
+                }
+                disabled={loadingGrounds}
               >
                 <option value="">
                   Select Ground
@@ -511,14 +598,15 @@ useEffect(() => {
 
               <select
                 value={selectedResource}
-                disabled={!selectedGround}
-                onChange={(event) => {
+                onChange={(event) =>
                   setSelectedResource(
                     event.target.value
-                  );
-
-                  setAvailability(null);
-                }}
+                  )
+                }
+                disabled={
+                  loadingResources ||
+                  resources.length === 0
+                }
               >
                 <option value="">
                   Select Resource
@@ -541,17 +629,11 @@ useEffect(() => {
               <input
                 type="date"
                 value={selectedDate}
-                min={today}
-                onChange={(event) => {
+                onChange={(event) =>
                   setSelectedDate(
                     event.target.value
-                  );
-
-                  setBlockForm((previous) => ({
-                    ...previous,
-                    date: event.target.value,
-                  }));
-                }}
+                  )
+                }
               />
             </div>
 
@@ -559,119 +641,182 @@ useEffect(() => {
 
           {/* OPERATING HOURS */}
 
-          {availability &&
-            availability.operatingHours &&
-            currentResource && (
-              <div className="avail-hours-banner">
+          {availability && (
+            <div className="avail-hours-banner">
 
-                <span>
-                  Operating Hours:{" "}
-                  {formatTime(
-                    availability.operatingHours
-                      .opening_time
-                  )}{" "}
-                  –{" "}
-                  {formatTime(
-                    availability.operatingHours
-                      .closing_time
-                  )}
-                </span>
+              <span>
+                Operating Hours:{" "}
+                {formatTime(getOpeningTime())} –{" "}
+                {formatTime(getClosingTime())}
+              </span>
 
-                <span>
-                  {currentResource.name} ·{" "}
-                  {currentGround?.name || ""}
-                </span>
+              <span>
+                {selectedResourceData?.name ||
+                  availability.resource?.name}{" "}
+                ·{" "}
+                {selectedGroundData?.name ||
+                  ""}
+              </span>
 
-              </div>
-            )}
+            </div>
+          )}
 
           {/* LEGEND */}
 
-          {selectedResource && (
-            <div className="avail-legend">
+          <div className="avail-legend">
 
-              <div className="avail-legend__item">
-                <span className="avail-legend__dot avail-legend__dot--available"></span>
-                Available
-              </div>
+            <div className="avail-legend__item">
+              <span className="avail-legend__dot avail-legend__dot--available"></span>
+              Available
+            </div>
 
-              <div className="avail-legend__item">
-                <span className="avail-legend__dot avail-legend__dot--booked"></span>
-                Booked
-              </div>
+            <div className="avail-legend__item">
+              <span className="avail-legend__dot avail-legend__dot--booked"></span>
+              Booked
+            </div>
 
-              <div className="avail-legend__item">
-                <span className="avail-legend__dot avail-legend__dot--blocked"></span>
-                Blocked
-              </div>
+            <div className="avail-legend__item">
+              <span className="avail-legend__dot avail-legend__dot--blocked"></span>
+              Blocked
+            </div>
 
+          </div>
+
+          {/* LOADING */}
+
+          {loadingAvailability && (
+            <div className="admin-empty-state">
+              Loading availability...
             </div>
           )}
 
           {/* TIMELINE */}
 
-          <div className="avail-timeline">
+          {!loadingAvailability &&
+            availability &&
+            timeline.length > 0 && (
 
-            {loading ? (
-              <div>
-                Loading availability...
-              </div>
-            ) : !selectedResource ? (
-              <div>
-                Select a ground and resource to view
-                availability.
-              </div>
-            ) : timelineSlots.length === 0 ? (
-              <div>
-                No availability found.
-              </div>
-            ) : (
-              timelineSlots.map((slot) => (
-                <div
-                  key={slot.startTime}
-                  className={`avail-slot avail-slot--${slot.status}`}
-                >
-                  <div className="avail-slot__time">
-                    {formatTime(slot.startTime)}
-                  </div>
+              <div className="avail-timeline">
 
-                  <div className="avail-slot__status">
-                    {slot.status === "available"
-                      ? "Available"
-                      : slot.status === "booked"
-                      ? "Booked"
-                      : "Blocked"}
-                  </div>
-                </div>
-              ))
+                {timeline.map((slot) => {
+
+                  const status =
+                    getSlotStatus(slot);
+
+                  return (
+                    <div
+                      key={`${slot.start}-${slot.end}`}
+                      className={`avail-slot avail-slot--${status}`}
+                    >
+
+                      <div className="avail-slot__time">
+                        {formatTime(slot.start)}
+                      </div>
+
+                      <div className="avail-slot__status">
+                        {status === "available" &&
+                          "Available"}
+
+                        {status === "booked" &&
+                          "Booked"}
+
+                        {status === "blocked" &&
+                          "Blocked"}
+                      </div>
+
+                    </div>
+                  );
+                })}
+
+              </div>
             )}
 
-          </div>
+          {/* NO AVAILABILITY */}
+
+          {!loadingAvailability &&
+            selectedResource &&
+            !availability && (
+              <div className="admin-empty-state">
+                No availability data found.
+              </div>
+            )}
+
+          {/* BLOCKED PERIODS */}
+
+          {!loadingAvailability &&
+            availability?.blocked_slots?.length >
+              0 && (
+
+              <div className="availability-blocks-list">
+
+                <h3>Blocked Periods</h3>
+
+                {availability.blocked_slots.map(
+                  (block) => (
+
+                    <div
+                      className="availability-block-item"
+                      key={block.block_id}
+                    >
+
+                      <div>
+                        <strong>
+                          {formatTime(
+                            block.start_time
+                          )}{" "}
+                          –{" "}
+                          {formatTime(
+                            block.end_time
+                          )}
+                        </strong>
+
+                        <span>
+                          {block.reason ||
+                            "Unavailable"}
+                        </span>
+                      </div>
+
+                      <button
+                        className="btn btn--outline btn--sm"
+                        type="button"
+                        onClick={() =>
+                          handleDeleteBlock(
+                            block.block_id
+                          )
+                        }
+                      >
+                        Remove
+                      </button>
+
+                    </div>
+                  )
+                )}
+
+              </div>
+            )}
 
         </div>
       </main>
 
-      {/* ==========================================
-          COMBINED BLOCK MODAL
-      ========================================== */}
+      {/* ------------------------------------------------ */}
+      {/* BLOCK TIME MODAL */}
+      {/* ------------------------------------------------ */}
 
-      {showModal && (
-        <div
-          className="modal-backdrop"
-          style={{ display: "flex" }}
-        >
+      {showBlockTimeModal && (
+
+        <div className="modal-backdrop">
 
           <div className="modal-card">
 
             <div className="modal-card__head">
 
-              <h3>Block Availability</h3>
+              <h3>Block Time</h3>
 
               <button
                 className="modal-close"
                 type="button"
                 onClick={() =>
-                  setShowModal(false)
+                  setShowBlockTimeModal(false)
                 }
               >
                 ✕
@@ -679,30 +824,9 @@ useEffect(() => {
 
             </div>
 
-            <form onSubmit={handleCreateBlock}>
-
-              <div className="field">
-
-                <label>Block Type</label>
-
-                <select
-                  value={blockType}
-                  onChange={(event) =>
-                    setBlockType(
-                      event.target.value
-                    )
-                  }
-                >
-                  <option value="TIME">
-                    Specific Time
-                  </option>
-
-                  <option value="FULL_DAY">
-                    Full Day
-                  </option>
-                </select>
-
-              </div>
+            <form
+              onSubmit={handleBlockTimeSubmit}
+            >
 
               <div className="field">
 
@@ -711,72 +835,56 @@ useEffect(() => {
                 <input
                   type="date"
                   name="date"
-                  value={blockForm.date}
-                  min={today}
-                  onChange={handleBlockChange}
+                  value={
+                    blockTimeForm.date
+                  }
+                  onChange={
+                    handleBlockTimeChange
+                  }
                   required
                 />
 
               </div>
 
-              {blockType === "TIME" && (
-                <div className="field--row">
+              <div className="field--row">
 
-                  <div className="field">
+                <div className="field">
 
-                    <label>Start Time</label>
+                  <label>Start Time</label>
 
-                    <input
-                      type="time"
-                      name="start_time"
-                      value={
-                        blockForm.start_time
-                      }
-                      onChange={
-                        handleBlockChange
-                      }
-                      required
-                    />
-
-                  </div>
-
-                  <div className="field">
-
-                    <label>End Time</label>
-
-                    <input
-                      type="time"
-                      name="end_time"
-                      value={
-                        blockForm.end_time
-                      }
-                      onChange={
-                        handleBlockChange
-                      }
-                      required
-                    />
-
-                  </div>
+                  <input
+                    type="time"
+                    name="startTime"
+                    value={
+                      blockTimeForm.startTime
+                    }
+                    onChange={
+                      handleBlockTimeChange
+                    }
+                    required
+                  />
 
                 </div>
-              )}
 
-              {blockType === "FULL_DAY" &&
-                currentResource && (
-                  <div className="field">
-                    <label>Operating Hours</label>
+                <div className="field">
 
-                    <input
-                      type="text"
-                      value={`${formatTime(
-                        currentResource.opening_time
-                      )} – ${formatTime(
-                        currentResource.closing_time
-                      )}`}
-                      readOnly
-                    />
-                  </div>
-                )}
+                  <label>End Time</label>
+
+                  <input
+                    type="time"
+                    name="endTime"
+                    value={
+                      blockTimeForm.endTime
+                    }
+                    onChange={
+                      handleBlockTimeChange
+                    }
+                    required
+                  />
+
+                </div>
+
+              </div>
 
               <div className="field">
 
@@ -785,8 +893,12 @@ useEffect(() => {
                 <input
                   type="text"
                   name="reason"
-                  value={blockForm.reason}
-                  onChange={handleBlockChange}
+                  value={
+                    blockTimeForm.reason
+                  }
+                  onChange={
+                    handleBlockTimeChange
+                  }
                   placeholder="e.g. Maintenance"
                 />
 
@@ -798,7 +910,7 @@ useEffect(() => {
                   type="button"
                   className="btn btn--outline"
                   onClick={() =>
-                    setShowModal(false)
+                    setShowBlockTimeModal(false)
                   }
                 >
                   Cancel
@@ -808,7 +920,7 @@ useEffect(() => {
                   type="submit"
                   className="btn btn--primary"
                 >
-                  Block Availability
+                  Block Time
                 </button>
 
               </div>
@@ -816,11 +928,106 @@ useEffect(() => {
             </form>
 
           </div>
+
         </div>
       )}
-      </div>
-    </>
+
+      {/* ------------------------------------------------ */}
+      {/* BLOCK DATE MODAL */}
+      {/* ------------------------------------------------ */}
+
+      {showBlockDateModal && (
+
+        <div className="modal-backdrop">
+
+          <div className="modal-card">
+
+            <div className="modal-card__head">
+
+              <h3>Block Date</h3>
+
+              <button
+                className="modal-close"
+                type="button"
+                onClick={() =>
+                  setShowBlockDateModal(false)
+                }
+              >
+                ✕
+              </button>
+
+            </div>
+
+            <form
+              onSubmit={handleBlockDateSubmit}
+            >
+
+              <div className="field">
+
+                <label>Date</label>
+
+                <input
+                  type="date"
+                  name="date"
+                  value={
+                    blockDateForm.date
+                  }
+                  onChange={
+                    handleBlockDateChange
+                  }
+                  required
+                />
+
+              </div>
+
+              <div className="field">
+
+                <label>Reason</label>
+
+                <input
+                  type="text"
+                  name="reason"
+                  value={
+                    blockDateForm.reason
+                  }
+                  onChange={
+                    handleBlockDateChange
+                  }
+                  placeholder="e.g. Private Event"
+                />
+
+              </div>
+
+              <div className="modal-actions">
+
+                <button
+                  type="button"
+                  className="btn btn--outline"
+                  onClick={() =>
+                    setShowBlockDateModal(false)
+                  }
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  className="btn btn--primary"
+                >
+                  Block Date
+                </button>
+
+              </div>
+
+            </form>
+
+          </div>
+
+        </div>
+      )}
+
+    </div>
   );
-}
+};
 
 export default OwnerAvailability;

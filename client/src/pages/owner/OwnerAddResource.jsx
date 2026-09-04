@@ -67,103 +67,105 @@ const { groundId } = useParams();
   };
 
   const handleImageChange = (event) => {
-    const selectedFiles = Array.from(
-      event.target.files
-    );
+  const selectedFiles = Array.from(event.target.files);
 
-    setImages(selectedFiles);
-  };
+  setImages((previous) => [
+    ...previous,
+    ...selectedFiles,
+  ]);
+
+  event.target.value = "";
+};
 
   const handleSubmit = async (event) => {
-    event.preventDefault();
+  event.preventDefault();
 
-    setError("");
+  setError("");
 
-    if (!formData.groundId) {
-      setError("Please select a ground.");
-      return;
+  if (!formData.groundId) {
+    setError("Please select a ground.");
+    return;
+  }
+
+  if (!formData.name.trim()) {
+    setError("Resource name is required.");
+    return;
+  }
+
+  if (!formData.pricePerHour) {
+    setError("Price per hour is required.");
+    return;
+  }
+
+  if (Number(formData.pricePerHour) <= 0) {
+    setError("Price per hour must be greater than 0.");
+    return;
+  }
+
+  if (formData.openTime >= formData.closeTime) {
+    setError("Closing time must be later than opening time.");
+    return;
+  }
+
+  try {
+    setSaving(true);
+
+    // -----------------------------------
+    // STEP 1: Create resource
+    // -----------------------------------
+
+    const response = await api.post("/resources", {
+      ground_id: formData.groundId,
+      name: formData.name,
+      sport_type: formData.sportType,
+      price_per_hour: formData.pricePerHour,
+      opening_time: formData.openTime,
+      closing_time: formData.closeTime,
+      status: formData.status,
+    });
+
+    const createdResource = response.data.resource;
+
+    // -----------------------------------
+    // STEP 2: Upload photos one by one
+    // -----------------------------------
+
+    if (images.length > 0) {
+      for (const image of images) {
+        const imageData = new FormData();
+
+        imageData.append("photo", image);
+
+        await api.post(
+          `/resources/${createdResource.id}/photos`,
+          imageData,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
+          }
+        );
+      }
     }
 
-    if (!formData.name.trim()) {
-      setError("Resource name is required.");
-      return;
-    }
+    // -----------------------------------
+    // STEP 3: Go back to ground details
+    // -----------------------------------
 
-    if (!formData.pricePerHour) {
-      setError("Price per hour is required.");
-      return;
-    }
+    navigate(
+      `/owner/grounds/${createdResource.ground_id}`
+    );
+  } catch (error) {
+    console.error("Create resource error:", error);
 
-    if (
-      Number(formData.pricePerHour) <= 0
-    ) {
-      setError("Price per hour must be greater than 0.");
-      return;
-    }
-
-    if (formData.openTime >= formData.closeTime) {
-      setError(
-        "Closing time must be later than opening time."
-      );
-      return;
-    }
-
-    try {
-      setSaving(true);
-
-      const data = new FormData();
-
-      data.append("ground_id", formData.groundId);
-      data.append("name", formData.name);
-      data.append("sport_type", formData.sportType);
-      data.append(
-        "price_per_hour",
-        formData.pricePerHour
-      );
-      data.append(
-        "opening_time",
-        formData.openTime
-      );
-      data.append(
-        "closing_time",
-        formData.closeTime
-      );
-      data.append("status", formData.status);
-
-      images.forEach((image) => {
-        data.append("images", image);
-      });
-
-      const response = await api.post(
-        "/resources",
-        data,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
-
-      const createdResource =
-        response.data.resource;
-
-      navigate(
-        `/owner/grounds/${createdResource.ground_id}`
-      );
-    } catch (error) {
-      console.error(
-        "Create resource error:",
-        error
-      );
-
-      setError(
-        error.response?.data?.message ||
-          "Failed to create resource."
-      );
-    } finally {
-      setSaving(false);
-    }
-  };
+    setError(
+      error.response?.data?.message ||
+        "Failed to create resource."
+    );
+  } finally {
+    setSaving(false);
+  }
+};
 
   return (
     <div className="admin-shell">

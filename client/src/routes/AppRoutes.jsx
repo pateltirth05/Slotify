@@ -1,8 +1,4 @@
-import {
-  BrowserRouter,
-  Routes,
-  Route,
-} from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import Login from "../pages/auth/Login.jsx";
 import Register from "../pages/auth/Register.jsx";
@@ -45,59 +41,27 @@ import AdminPayments from "../pages/admin/AdminPayments.jsx";
 import AdminSettlements from "../pages/admin/AdminSettlements.jsx";
 import AdminProfile from "../pages/admin/AdminProfile.jsx";
 
-
-
-
-
-
-
-
-
-
-
 function AppRoutes() {
   return (
     <BrowserRouter>
       <Routes>
-
         {/* =========================
             PUBLIC ROUTES
         ========================= */}
 
-        <Route
-          path="/"
-          element={<Home />}
-        />
+        <Route path="/" element={<Home />} />
 
-        <Route
-          path="/about"
-          element={<About />}
-        />
+        <Route path="/about" element={<About />} />
 
-        <Route
-          path="/login"
-          element={<Login />}
-        />
+        <Route path="/login" element={<Login />} />
 
-        <Route
-          path="/register"
-          element={<Register />}
-        />
+        <Route path="/register" element={<Register />} />
 
-        <Route
-          path="/construction"
-          element={<Construction />}
-        />
+        <Route path="/construction" element={<Construction />} />
 
-        <Route
-          path="/grounds"
-          element={<Grounds />}
-        />
+        <Route path="/grounds" element={<Grounds />} />
 
-        <Route
-          path="/grounds/:id"
-          element={<GroundDetails />}
-        />
+        <Route path="/grounds/:id" element={<GroundDetails />} />
 
         {/* Resource booking selection stays public.
             Login happens when customer continues to checkout. */}
@@ -107,21 +71,12 @@ function AppRoutes() {
           element={<ResourseBooking />}
         />
 
-
         {/* =========================
             LOGGED-IN CUSTOMER
         ========================= */}
 
         <Route element={<ProtectedRoute />}>
-
-          <Route
-            element={
-              <RoleRoute
-                allowedRoles={["CUSTOMER"]}
-              />
-            }
-          >
-
+          <Route element={<RoleRoute allowedRoles={["CUSTOMER"]} />}>
             <Route
               path="/grounds/:groundId/resources/:resourceId/booking"
               element={<BookingCheckout />}
@@ -132,174 +87,68 @@ function AppRoutes() {
               element={<BookingConfirmation />}
             />
 
-            <Route
-              path="/my-bookings"
-              element={<MyBookings />}
-            />
+            <Route path="/my-bookings" element={<MyBookings />} />
 
-            <Route
-              path="/bookings/:id"
-              element={<BookingDetails />}
-            />
+            <Route path="/bookings/:id" element={<BookingDetails />} />
 
-            <Route
-              path="/profile"
-              element={<Profile />}
-            />
-
-            
-
+            <Route path="/profile" element={<Profile />} />
           </Route>
-
 
           {/* =========================
               OWNER
           ========================= */}
 
-          <Route
-            element={
-              <RoleRoute
-                allowedRoles={["OWNER"]}
-              />
-            }
-          >
+          <Route element={<RoleRoute allowedRoles={["OWNER"]} />}>
+            <Route path="/owner/dashboard" element={<Owner />} />
+
+            <Route path="/owner/grounds" element={<OwnerGrounds />} />
+            <Route path="/owner/grounds/:id" element={<OwnerGroundDetails />} />
+            <Route path="/owner/grounds/add" element={<OwnerAddGround />} />
 
             <Route
-              path="/owner/dashboard"
-              element={<Owner />}
+              path="/owner/grounds/:id/edit"
+              element={<OwnerEditGround />}
             />
+            <Route path="/owner/resources/add" element={<OwnerAddResource />} />
+            <Route path="/owner/resources/add" element={<OwnerAddResource />} />
 
-             <Route
-              path="/owner/grounds"
-              element={<OwnerGrounds />}
+            <Route
+              path="/owner/grounds/:groundId/resources/add"
+              element={<OwnerAddResource />}
             />
             <Route
-  path="/owner/grounds/:id"
-  element={<OwnerGroundDetails />}
-/>
-<Route
-  path="/owner/grounds/add"
-  element={<OwnerAddGround />}
-/>
-
-<Route
-  path="/owner/grounds/:id/edit"
-  element={<OwnerEditGround />}
-/>
-<Route
-  path="/owner/resources/add"
-  element={<OwnerAddResource />}
-/>
-<Route
-  path="/owner/resources/add"
-  element={<OwnerAddResource />}
-/>
-
-<Route
-  path="/owner/grounds/:groundId/resources/add"
-  element={<OwnerAddResource />}
-/>
-<Route
-  path="/owner/resources/:id/edit"
-  element={<OwnerManageResource />}
-/>
-<Route
-  path="/owner/resources"
-  element={<OwnerResources />}
-/>
-<Route
-  path="/owner/availability"
-  element={
-    
-      <OwnerAvailability />
-   
-  }
-/>
-<Route
-  path="/owner/bookings"
-  element={
-  
-      <OwnerBookings />
-   
-  }
-/>
-<Route
-  path="/owner/bookings/:id"
-  element={
-  
-      <OwnerBookingDetails />
-  
-  }
-/>
-<Route
-  path="/owner/earnings"
-  element={
-  
-      <OwnerEarnings />
- 
-  }
-/>
-<Route
-  path="/owner/payment-details"
-  element={
-    
-      <OwnerPaymentDetails />
-  
-  }
-/>
-<Route
-  path="/owner/profile"
-  element={
-    
-      <OwnerProfile />
-  
-  }
-/>
-
+              path="/owner/resources/:id/edit"
+              element={<OwnerManageResource />}
+            />
+            <Route path="/owner/resources" element={<OwnerResources />} />
+            <Route path="/owner/availability" element={<OwnerAvailability />} />
+            <Route path="/owner/bookings" element={<OwnerBookings />} />
+            <Route
+              path="/owner/bookings/:id"
+              element={<OwnerBookingDetails />}
+            />
+            <Route path="/owner/earnings" element={<OwnerEarnings />} />
+            <Route
+              path="/owner/payment-details"
+              element={<OwnerPaymentDetails />}
+            />
+            <Route path="/owner/profile" element={<OwnerProfile />} />
           </Route>
-
 
           {/* =========================
               ADMIN
           ========================= */}
 
-          <Route
-            element={
-              <RoleRoute
-                allowedRoles={["ADMIN"]}
-              />
-            }
-          >
-<Route
-  path="/admin/dashboard"
-  element={
-   <Admin/>
-  }
-/>
-<Route
-  path="/admin/users"
-  element={
-   
-      <AdminUsers />
-   
-  }
-/>
-<Route
-  path="/admin/grounds"
-  element={
-   
-      <AdminGrounds />
-   
-  }
-/>
-<Route path="/admin/construction" element={<Constructions/>}/>
-<Route path="/admin/payments" element={<AdminPayments/>}/>
-<Route path="/admin/settlements" element={<AdminSettlements/>}/>
-<Route path="/admin/profile" element={<AdminProfile/>}/>
+          <Route element={<RoleRoute allowedRoles={["ADMIN"]} />}>
+            <Route path="/admin/dashboard" element={<Admin />} />
+            <Route path="/admin/users" element={<AdminUsers />} />
+            <Route path="/admin/grounds" element={<AdminGrounds />} />
+            <Route path="/admin/construction" element={<Constructions />} />
+            <Route path="/admin/payments" element={<AdminPayments />} />
+            <Route path="/admin/settlements" element={<AdminSettlements />} />
+            <Route path="/admin/profile" element={<AdminProfile />} />
           </Route>
-
         </Route>
-
       </Routes>
     </BrowserRouter>
   );

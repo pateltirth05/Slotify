@@ -57,13 +57,19 @@ export const login=async(req,res)=>{
                 message:"Email and password are required"
             })
         }
-         const result=await pool.query(`SELECT id,name,email,password_hash,role FROM users where email=$1`,[email]);
+         const result=await pool.query(`SELECT id,name,email,password_hash,role,status FROM users where email=$1`,[email]);
          if(result.rows.length===0)
          {
             return res.status(401).json({ success: false,
         message: "Invalid email or password",})
          }
          const user=result.rows[0];
+         if (user.status === "BLOCKED") {
+  return res.status(403).json({
+    success: false,
+    message: "Your account has been blocked by the administrator.",
+  });
+}
          const isPasswordCorrect=await bcrypt.compare(password,user.password_hash)
 
          if(!isPasswordCorrect)

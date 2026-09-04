@@ -104,9 +104,9 @@ if (redirectTo) {
   <label className="checkbox-row">
     <input type="checkbox" name="remember" /> Remember me
   </label>
-  <a href="forgot-password.html" style={{ fontSize: '.85rem', fontWeight: 700, color: 'var(--c-green)' }}>
+  <Link to={"/construction"} style={{ fontSize: '.85rem', fontWeight: 700, color: 'var(--c-green)' }}>
     Forgot password?
-  </a>
+  </Link>
 </div>
         <button type="submit" disabled={loading} className="btn btn--primary btn--block btn--lg">  {loading ? "Logging in..." : "Log In"}</button>
       </form>
