@@ -137,3 +137,46 @@ export const saveOwnerPaymentDetails = async (req, res) => {
     });
   }
 };
+export const getAdminOwnerPaymentDetails = async (req, res) => {
+  try {
+    const ownerId = req.params.ownerId;
+
+    const result = await pool.query(
+      `
+      SELECT
+        id,
+        owner_id,
+        upi_id,
+        payment_instructions,
+        created_at,
+        updated_at
+      FROM owner_payment_details
+      WHERE owner_id = $1
+      `,
+      [ownerId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.json({
+        success: true,
+        payment_details: null
+      });
+    }
+
+    res.json({
+      success: true,
+      payment_details: result.rows[0]
+    });
+
+  } catch (error) {
+    console.error(
+      "Get admin owner payment details error:",
+      error
+    );
+
+    res.status(500).json({
+      success: false,
+      message: "Server error"
+    });
+  }
+};

@@ -356,7 +356,7 @@ function OwnerGroundDetails() {
 
                   <div className="resource-card__actions">
                     <Link
-                      to={`/owner/resources/${resource.id}`}
+                      to={`/owner/resources/${resource.id}/edit`}
                       className="btn btn--outline btn--sm"
                     >
                       Manage Resource

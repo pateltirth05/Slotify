@@ -99,47 +99,97 @@ export const getAdminDashboard = async (req, res) => {
     `);
 
     const stats = result.rows[0];
+const recentBookingsResult = await pool.query(`
+  SELECT
+    b.id,
+    b.booking_date,
+    b.total_amount,
+    b.payment_method,
+    b.payment_status,
+    b.status,
 
-    res.status(200).json({
-      success: true,
+    u.name AS customer_name,
 
-      dashboard: {
-        users: {
-          total: Number(stats.total_users),
-          customers: Number(stats.total_customers),
-          owners: Number(stats.total_owners),
-          admins: Number(stats.total_admins)
-        },
+    g.name AS ground_name,
 
-        grounds: {
-          total: Number(stats.total_grounds),
-          active: Number(stats.active_grounds)
-        },
+    r.name AS resource_name
 
-        resources: {
-          total: Number(stats.total_resources),
-          active: Number(stats.active_resources)
-        },
+  FROM bookings b
 
-        bookings: {
-          total: Number(stats.total_bookings),
-          pending: Number(stats.pending_bookings),
-          confirmed: Number(stats.confirmed_bookings),
-          cancelled: Number(stats.cancelled_bookings),
-          completed: Number(stats.completed_bookings)
-        },
+  JOIN users u
+    ON u.id = b.customer_id
 
-        revenue: {
-          online: Number(stats.online_revenue),
-          cash: Number(stats.cash_revenue),
-          total: Number(stats.total_paid_revenue)
-        },
+  JOIN resources r
+    ON r.id = b.resource_id
 
-        settlements: {
-          pending_online: Number(stats.pending_online_settlement)
-        }
-      }
-    });
+  JOIN grounds g
+    ON g.id = r.ground_id
+
+  ORDER BY b.created_at DESC
+
+  LIMIT 5
+`);
+const recentUsersResult = await pool.query(`
+  SELECT
+    id,
+    name,
+    email,
+    role,
+    status,
+    created_at
+
+  FROM users
+
+  ORDER BY created_at DESC
+
+  LIMIT 5
+`);
+  res.status(200).json({
+  success: true,
+
+  dashboard: {
+    users: {
+      total: Number(stats.total_users),
+      customers: Number(stats.total_customers),
+      owners: Number(stats.total_owners),
+      admins: Number(stats.total_admins)
+    },
+
+    grounds: {
+      total: Number(stats.total_grounds),
+      active: Number(stats.active_grounds)
+    },
+
+    resources: {
+      total: Number(stats.total_resources),
+      active: Number(stats.active_resources)
+    },
+
+    bookings: {
+      total: Number(stats.total_bookings),
+      pending: Number(stats.pending_bookings),
+      confirmed: Number(stats.confirmed_bookings),
+      cancelled: Number(stats.cancelled_bookings),
+      completed: Number(stats.completed_bookings)
+    },
+
+    revenue: {
+      online: Number(stats.online_revenue),
+      cash: Number(stats.cash_revenue),
+      total: Number(stats.total_paid_revenue)
+    },
+
+    settlements: {
+      pending_online: Number(
+        stats.pending_online_settlement
+      )
+    },
+
+    recentBookings: recentBookingsResult.rows,
+
+    recentUsers: recentUsersResult.rows
+  }
+});
 
   } catch (error) {
     console.error("Admin dashboard error:", error);

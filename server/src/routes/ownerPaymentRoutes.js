@@ -2,7 +2,8 @@ import express from "express";
 
 import {
   getOwnerPaymentDetails,
-  saveOwnerPaymentDetails
+  saveOwnerPaymentDetails,
+  getAdminOwnerPaymentDetails
 } from "../controllers/ownerPaymentController.js";
 
 import { protect } from "../middleware/authMiddleware.js";
@@ -22,6 +23,13 @@ router.put(
   protect,
   requireRole("OWNER"),
   saveOwnerPaymentDetails
+);
+
+router.get(
+  "/admin/:ownerId",
+  protect,
+  requireRole("ADMIN"),
+  getAdminOwnerPaymentDetails
 );
 
 export default router;

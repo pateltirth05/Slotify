@@ -1,0 +1,55 @@
+/* ==========================================================================
+   SLOTIFY — Platform Admin Styles
+   (extends style.css + admin-style.css + owner-style.css)
+   ========================================================================== */
+
+/* ---------- Platform activity mini cards ---------- */
+.mini-stat-grid{ display:grid; grid-template-columns:repeat(5,1fr); gap:14px; }
+.mini-stat-card{ background:#fff; border:1px solid var(--c-line); border-radius:var(--r-md); padding:16px; text-align:center; }
+.mini-stat-card b{ font-family:var(--font-display); font-size:1.5rem; display:block; color:var(--c-green); }
+.mini-stat-card span{ font-size:.76rem; color:var(--c-ink-faint); font-weight:600; }
+
+/* ---------- Status timeline (booking detail) ---------- */
+.status-timeline{ display:flex; align-items:center; gap:0; margin:20px 0; }
+.status-timeline__step{ display:flex; flex-direction:column; align-items:center; gap:8px; flex:1; text-align:center; }
+.status-timeline__dot{ width:36px; height:36px; border-radius:50%; background:var(--c-cream-dark); color:var(--c-ink-faint); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:.9rem; }
+.status-timeline__step.is-done .status-timeline__dot{ background:var(--c-green); color:#fff; }
+.status-timeline__step.is-current .status-timeline__dot{ background:var(--c-accent); color:var(--c-ink); }
+.status-timeline__step.is-cancelled .status-timeline__dot{ background:var(--c-danger); color:#fff; }
+.status-timeline__label{ font-size:.78rem; font-weight:700; color:var(--c-ink-faint); }
+.status-timeline__step.is-done .status-timeline__label,
+.status-timeline__step.is-current .status-timeline__label{ color:var(--c-ink); }
+.status-timeline__line{ height:2px; background:var(--c-line); flex:1; margin-top:-26px; }
+.status-timeline__line.is-done{ background:var(--c-green); }
+
+/* ---------- User detail ---------- */
+.user-detail-head{ display:flex; align-items:center; gap:16px; margin-bottom:20px; }
+.user-detail-avatar{ width:64px; height:64px; border-radius:50%; background:var(--c-green); color:#fff; display:flex; align-items:center; justify-content:center; font-family:var(--font-display); font-size:1.5rem; flex-shrink:0; }
+.role-badge{ display:inline-flex; font-size:.72rem; font-weight:800; text-transform:uppercase; letter-spacing:.05em; padding:4px 10px; border-radius:999px; background:var(--c-cream-dark); color:var(--c-ink-soft); }
+.role-badge--owner{ background:#eaf1fb; color:#1d4e89; }
+.role-badge--admin{ background:#fdeee0; color:#b5540a; }
+.role-badge--customer{ background:var(--c-success-bg); color:var(--c-green); }
+.badge--blocked{ background:var(--c-danger-bg); color:var(--c-danger); }
+.badge--created{ background:#eaf1fb; color:#1d4e89; }
+.badge--failed{ background:var(--c-danger-bg); color:var(--c-danger); }
+
+/* ---------- Confirmation modal (destructive actions) ---------- */
+.confirm-modal-icon{ width:52px; height:52px; border-radius:50%; background:var(--c-danger-bg); color:var(--c-danger); display:flex; align-items:center; justify-content:center; font-size:1.4rem; margin-bottom:14px; }
+.confirm-modal-icon.is-positive{ background:var(--c-success-bg); color:var(--c-green); }
+
+/* ---------- Readonly info rows (payment identifiers etc.) ---------- */
+.readonly-row{ display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--c-line); font-size:.86rem; }
+.readonly-row:last-child{ border-bottom:none; }
+.readonly-row__label{ color:var(--c-ink-faint); font-weight:600; }
+.readonly-row__value{ font-weight:700; font-family:monospace; font-size:.84rem; }
+
+/* ---------- Responsive ---------- */
+@media (max-width:980px){
+  .mini-stat-grid{ grid-template-columns:repeat(3,1fr); }
+  .status-timeline{ flex-direction:column; align-items:flex-start; gap:14px; }
+  .status-timeline__line{ display:none; }
+  .status-timeline__step{ flex-direction:row; text-align:left; }
+}
+@media (max-width:640px){
+  .mini-stat-grid{ grid-template-columns:repeat(2,1fr); }
+}

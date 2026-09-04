@@ -799,6 +799,9 @@ export const getOwnerBookings = async (req, res) => {
         b.duration,
         b.total_amount,
         b.status,
+        b.payment_method,
+        b.payment_status,
+        b.paid_at,
         b.created_at,
 
         r.id AS resource_id,
@@ -844,7 +847,6 @@ export const getOwnerBookings = async (req, res) => {
     });
   }
 };
-
 export const updateBookingStatus = async (req, res) => {
   try {
     const { id } = req.params;
@@ -955,6 +957,136 @@ export const updateBookingStatus = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Internal Server error",
+    });
+  }
+};
+export const getOwnerBookingById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const ownerId = req.user.userId;
+
+    const result = await pool.query(
+      `
+      SELECT
+        b.id,
+        b.booking_date,
+        b.start_time,
+        b.end_time,
+        b.duration,
+        b.total_amount,
+        b.status AS booking_status,
+        b.payment_method,
+        b.payment_status,
+        b.paid_at,
+        b.created_at,
+        b.updated_at,
+
+        u.id AS customer_id,
+        u.name AS customer_name,
+        u.email AS customer_email,
+
+        r.id AS resource_id,
+        r.name AS resource_name,
+        r.sport_type,
+        r.price_per_hour,
+
+        g.id AS ground_id,
+        g.name AS ground_name,
+        g.location AS ground_location,
+
+        p.id AS payment_id,
+        p.razorpay_order_id,
+        p.razorpay_payment_id,
+        p.status AS payment_record_status,
+        p.paid_at AS payment_paid_at
+
+      FROM bookings b
+
+      JOIN users u
+        ON u.id = b.customer_id
+
+      JOIN resources r
+        ON r.id = b.resource_id
+
+      JOIN grounds g
+        ON g.id = r.ground_id
+
+      LEFT JOIN payments p
+        ON p.booking_id = b.id
+
+      WHERE b.id = $1
+        AND g.owner_id = $2
+
+      LIMIT 1
+      `,
+      [id, ownerId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Booking not found",
+      });
+    }
+
+    const row = result.rows[0];
+
+    return res.status(200).json({
+      success: true,
+      booking: {
+        id: row.id,
+
+        customer: {
+          id: row.customer_id,
+          name: row.customer_name,
+          email: row.customer_email,
+        },
+
+        ground: {
+          id: row.ground_id,
+          name: row.ground_name,
+          location: row.ground_location,
+        },
+
+        resource: {
+          id: row.resource_id,
+          name: row.resource_name,
+          sport_type: row.sport_type,
+          price_per_hour: row.price_per_hour,
+        },
+
+        date: row.booking_date,
+        start_time: row.start_time,
+        end_time: row.end_time,
+        duration: row.duration,
+
+        pricing: {
+          price_per_hour: row.price_per_hour,
+          total_amount: row.total_amount,
+        },
+
+        booking_status: row.booking_status,
+
+        payment: {
+          method: row.payment_method,
+          status: row.payment_status,
+          payment_id: row.payment_id,
+          razorpay_order_id: row.razorpay_order_id,
+          razorpay_payment_id: row.razorpay_payment_id,
+          payment_record_status: row.payment_record_status,
+          paid_at: row.payment_paid_at,
+        },
+
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+      },
+    });
+  } catch (error) {
+    console.error("Get owner booking details error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to get booking details",
     });
   }
 };

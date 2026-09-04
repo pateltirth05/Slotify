@@ -9,7 +9,28 @@ function OwnerGrounds() {
   const [grounds, setGrounds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+const handleDelete = async (groundId) => {
+  const confirmed = window.confirm(
+    "Are you sure you want to delete this ground?"
+  );
 
+  if (!confirmed) return;
+
+  try {
+    await api.delete(`/grounds/${groundId}`);
+
+    setGrounds((prev) =>
+      prev.filter((ground) => ground.id !== groundId)
+    );
+  } catch (error) {
+    console.error("Delete ground error:", error);
+
+    alert(
+      error.response?.data?.message ||
+        "Failed to delete ground"
+    );
+  }
+};
   useEffect(() => {
     const fetchGrounds = async () => {
       try {
@@ -142,6 +163,13 @@ function OwnerGrounds() {
                       >
                         Edit
                       </Link>
+                      <button
+  type="button"
+  onClick={() => handleDelete(ground.id)}
+  className="btn btn--danger btn--sm"
+>
+ Delete
+</button>
                     </div>
                   </div>
                 </div>

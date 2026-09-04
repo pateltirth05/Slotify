@@ -269,13 +269,12 @@ export const deleteGround=async(req,res)=>{
             })
         }
         const ground=result.rows[0]
-        if(ground.owner_id !== req.user.userId)
-        {
-            return res.status(403).json({
+       if (ground.owner_id !== req.user.userId) {
+  return res.status(403).json({
     success: false,
-    message: "You are not authorized to update this ground",
+    message: "You are not authorized to delete this ground",
   });
-        }
+}
 
         await pool.query(
             `DELETE FROM grounds where id=$1`,[id]

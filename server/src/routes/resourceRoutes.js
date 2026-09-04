@@ -1,7 +1,7 @@
 import express from "express"
 import {protect} from "../middleware/authMiddleware.js"
 import { requireRole } from "../middleware/roleMiddleware.js"
-import { createResource, deleteResource, deleteResourcePhoto, getResourceById, getResourcesByGround, updateResource, uploadResourcePhoto } from "../controllers/resourceController.js"
+import { createResource, deleteResource, deleteResourcePhoto, getOwnerResources, getResourceById, getResourcesByGround, updateResource, uploadResourcePhoto } from "../controllers/resourceController.js"
 import { getAvailability } from "../controllers/bookingController.js"
 import upload from "../middleware/uploadMiddleware.js"
 const router=express.Router()
@@ -25,4 +25,10 @@ router.delete(
 router.get("/:id",getResourceById)
 router.put("/:id",protect,requireRole("OWNER"),updateResource)
 router.delete("/:id",protect,requireRole("OWNER"),deleteResource);
+router.get(
+  "/",
+  protect,
+  requireRole("OWNER"),
+  getOwnerResources
+);
 export default router;
