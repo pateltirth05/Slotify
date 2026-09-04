@@ -128,35 +128,84 @@ GROUP BY b.status`,
        LIMIT 5`,
       [ownerId]
     );
-
+// 9. My grounds
+const myGroundsResult = await pool.query(
+  `
+  SELECT
+    g.id,
+    g.name,
+    g.location,
+    g.photos,
+    g.status,
+    COUNT(r.id) AS resource_count
+  FROM grounds g
+  LEFT JOIN resources r
+    ON r.ground_id = g.id
+  WHERE g.owner_id = $1
+  GROUP BY g.id
+  ORDER BY g.created_at DESC
+  LIMIT 2
+  `,
+  [ownerId]
+);
+// 10. Most booked resource this month
+const mostBookedResourceResult = await pool.query(
+  `
+  SELECT
+    r.id,
+    r.name AS resource_name,
+    g.name AS ground_name,
+    COUNT(b.id) AS booking_count
+  FROM bookings b
+  JOIN resources r
+    ON b.resource_id = r.id
+  JOIN grounds g
+    ON r.ground_id = g.id
+  WHERE g.owner_id = $1
+    AND b.status IN ('CONFIRMED', 'COMPLETED')
+    AND b.booking_date >= DATE_TRUNC('month', CURRENT_DATE)
+    AND b.booking_date < DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month'
+  GROUP BY r.id, r.name, g.name
+  ORDER BY booking_count DESC
+  LIMIT 1
+  `,
+  [ownerId]
+);
     return res.status(200).json({
-      success: true,
-      dashboard: {
-        total_grounds: Number(groundsResult.rows[0].total_grounds),
+  success: true,
+  dashboard: {
+    total_grounds: Number(groundsResult.rows[0].total_grounds),
 
-        active_grounds: Number(
-          activeGroundsResult.rows[0].active_grounds
-        ),
+    active_grounds: Number(
+      activeGroundsResult.rows[0].active_grounds
+    ),
 
-        total_resources: Number(
-          resourcesResult.rows[0].total_resources
-        ),
+    total_resources: Number(
+      resourcesResult.rows[0].total_resources
+    ),
 
-        total_bookings: Number(
-          bookingsResult.rows[0].total_bookings
-        ),
+    total_bookings: Number(
+      bookingsResult.rows[0].total_bookings
+    ),
 
-        upcoming_bookings: Number(
-          upcomingResult.rows[0].upcoming_bookings
-        ),
+    upcoming_bookings: Number(
+      upcomingResult.rows[0].upcoming_bookings
+    ),
 
-        total_earnings: earningsResult.rows[0].total_earnings,
+    total_earnings: earningsResult.rows[0].total_earnings,
 
-        booking_status: bookingStatus,
+    booking_status: bookingStatus,
 
-        recent_bookings: recentBookingsResult.rows,
-      },
-    });
+    recent_bookings: recentBookingsResult.rows,
+
+    grounds: myGroundsResult.rows,
+
+    most_booked_resource:
+      mostBookedResourceResult.rows.length > 0
+        ? mostBookedResourceResult.rows[0]
+        : null,
+  },
+});
   } catch (error) {
     console.error("Failed to get owner dashboard:", error);
 

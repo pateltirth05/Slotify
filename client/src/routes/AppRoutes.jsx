@@ -23,14 +23,15 @@ import BookingConfirmation from "../pages/BookingConfirmation.jsx";
 import MyBookings from "../pages/MyBookings.jsx";
 import BookingDetails from "../pages/BookingDetails.jsx";
 import Profile from "../pages/Profile.jsx";
+import Owner from "../pages/owner/Owner.jsx";
+import OwnerGrounds from "../pages/owner/OwnerGrounds.jsx";
+import OwnerGroundDetails from "../pages/owner/OwnerGroundDetails.jsx";
 
 
 
 
 
-function OwnerDashboard() {
-  return <h1>Owner Dashboard</h1>;
-}
+
 
 
 function AdminDashboard() {
@@ -149,9 +150,17 @@ function AppRoutes() {
 
             <Route
               path="/owner/dashboard"
-              element={<OwnerDashboard />}
+              element={<Owner />}
             />
 
+             <Route
+              path="/owner/grounds"
+              element={<OwnerGrounds />}
+            />
+            <Route
+  path="/owner/grounds/:id"
+  element={<OwnerGroundDetails />}
+/>
           </Route>
 
 
